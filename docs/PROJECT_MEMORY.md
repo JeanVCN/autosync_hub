@@ -57,6 +57,7 @@ AutoSync Hub demonstrates a professional backend and integration architecture fo
 - Feature tests created for create/list/sync/callback/history flows.
 - Root README and docs created.
 - Local execution was not verified in this environment because `php` and `composer` commands are unavailable.
+- Added `docs/LARAVEL_FOR_GO_DEVELOPERS.md` as a learning guide that explains this Laravel project through comparisons with common Go backend patterns.
 
 ## Pending Tasks
 
