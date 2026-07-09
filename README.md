@@ -1,18 +1,18 @@
 # AutoSync Hub
 
-AutoSync Hub is a demonstrative backend and integrations project for automotive inventory synchronization. It shows how a Laravel backend can manage vehicles, request marketplace synchronization, receive provider status updates, and stay prepared for a future Go integration hub.
+AutoSync Hub é um projeto demonstrativo de backend e integrações para sincronização de estoque automotivo. Ele mostra como um backend Laravel pode gerenciar veículos, solicitar sincronização com marketplaces, receber atualizações de status por provider e ficar preparado para um hub de integração em Go.
 
-The first implementation phase focuses on `apps/backend-laravel`. The Go service is intentionally represented only by a placeholder because real providers such as OLX, Mercado Livre, and iCarros usually require credentials, approval flows, OAuth, and provider-specific contracts.
+A primeira etapa implementada concentra-se em `apps/backend-laravel`. O serviço Go ainda está representado apenas como base planejada, porque integrações reais com providers como OLX, Mercado Livre e iCarros normalmente exigem credenciais, aprovação, OAuth e contratos específicos por plataforma.
 
-## Why Laravel and Go
+## Por Que Laravel e Go
 
-Laravel is the main application backend: it owns vehicle registration, the public API, presentation screens, and integration status storage.
+Laravel é o backend principal da aplicação: ele cuida do cadastro de veículos, API pública, telas de apresentação e armazenamento dos status de integração.
 
-Go will later become the integration hub: a focused service for provider adapters, retries, external API calls, normalization, and callback delivery back to Laravel.
+Go será o hub de integração: um serviço focado em adapters de providers, retries, chamadas externas, normalização de respostas e envio de callbacks de volta para o Laravel.
 
-This split keeps the Laravel application clean while still showing a realistic path for scaling integration workloads.
+Essa divisão mantém o Laravel limpo e, ao mesmo tempo, mostra um caminho realista para escalar cargas de trabalho de integração.
 
-## Repository Structure
+## Estrutura do Repositório
 
 ```text
 autosync_hub/
@@ -22,24 +22,26 @@ autosync_hub/
   docs/
 ```
 
-## Current Features
+## Funcionalidades Atuais
 
-- Vehicle CRUD API.
-- Vehicle sync endpoint with simulated provider results.
-- Integration log history by provider and operation.
-- Callback endpoint prepared for future Go hub updates.
-- Simple Blade screens for listing and inspecting vehicles.
-- Demo seed data for vehicles and integration logs.
-- Feature tests for the main API flows.
+- API CRUD de veículos.
+- Endpoint de sincronização com resultados simulados por provider.
+- Histórico de logs de integração por provider e operação.
+- Endpoint de callback preparado para atualizações futuras vindas do hub Go.
+- Endpoint de resumo atual de integração por provider.
+- Telas Blade simples para listar e inspecionar veículos.
+- Dados seedados para demonstração de veículos e logs.
+- Testes de feature para os principais fluxos da API.
+- Contrato Laravel-Go documentado para a próxima etapa.
 
-## Requirements
+## Requisitos
 
-- PHP 8.2 or newer.
+- PHP 8.2 ou superior.
 - Composer.
-- SQLite, MySQL, or PostgreSQL. SQLite is enough for the demo.
-- Docker, if you prefer the validated container workflow.
+- SQLite, MySQL ou PostgreSQL. SQLite é suficiente para a demo.
+- Docker, se preferir usar o fluxo validado em container.
 
-## Setup
+## Como Rodar
 
 ```bash
 cd apps/backend-laravel
@@ -51,7 +53,7 @@ php artisan migrate --seed
 php artisan serve
 ```
 
-Docker workflow used during validation:
+Fluxo Docker usado na validação:
 
 ```bash
 docker pull composer:2
@@ -63,19 +65,19 @@ docker run --rm --user "$(id -u):$(id -g)" -p 8000:8000 \
   -w /app composer:2 php artisan serve --host=0.0.0.0 --port=8000
 ```
 
-Open:
+Abra:
 
-- Web panel: `http://127.0.0.1:8000/vehicles`
-- API base: `http://127.0.0.1:8000/api`
+- Painel web: `http://127.0.0.1:8000/vehicles`
+- Base da API: `http://127.0.0.1:8000/api`
 
-## Tests
+## Testes
 
 ```bash
 cd apps/backend-laravel
 php artisan test
 ```
 
-Validated container test command:
+Comando de teste validado em container:
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" \
@@ -83,7 +85,7 @@ docker run --rm --user "$(id -u):$(id -g)" \
   -w /app composer:2 php artisan test
 ```
 
-## Main Endpoints
+## Endpoints Principais
 
 - `GET /api/vehicles`
 - `POST /api/vehicles`
@@ -91,11 +93,14 @@ docker run --rm --user "$(id -u):$(id -g)" \
 - `PUT /api/vehicles/{vehicle}`
 - `DELETE /api/vehicles/{vehicle}`
 - `POST /api/vehicles/{vehicle}/sync`
+- `GET /api/vehicles/{vehicle}/integration-summary`
 - `GET /api/vehicles/{vehicle}/integration-logs`
 - `POST /api/integration-callbacks`
 
 ## Status
 
-The Laravel foundation has been validated with Composer dependencies, SQLite migrations, seeders, automated tests, and manual web/API checks. The next development phase should harden the Laravel integration flow before moving the simulation into `apps/integration-hub-go`.
+A base Laravel foi validada com dependências Composer, migrations SQLite, seeders, testes automatizados e checagens manuais web/API. O fluxo de integração Laravel foi endurecido com resumo por provider e validações negativas, e o contrato Laravel-Go já está documentado.
 
-See `docs/` for architecture, API contracts, Laravel-Go integration contract, integration flow, presentation guidance, and the living project memory.
+A próxima fase é implementar a fundação do hub Go em `apps/integration-hub-go`.
+
+Consulte `docs/` para arquitetura, contratos de API, contrato Laravel-Go, fluxo de integração, guia de apresentação e memória viva do projeto.

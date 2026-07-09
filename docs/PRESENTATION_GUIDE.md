@@ -1,74 +1,79 @@
-# Presentation Guide
+# Guia de Apresentação
 
-## Suggested Order
+## Ordem Sugerida
 
-1. Start with the problem: dealerships need one vehicle inventory source that can publish to multiple marketplaces.
-2. Show the monorepo structure and explain why Laravel and Go live together.
-3. Open the Laravel vehicle list at `/vehicles`.
-4. Open a vehicle detail page and show integration history.
-5. Trigger `POST /api/vehicles/{vehicle}/sync`.
-6. Show new logs and explain provider-level statuses.
-7. Send a callback payload to `POST /api/integration-callbacks`.
-8. Close by showing `docs/ARCHITECTURE.md` and the future Go hub plan.
+1. Comece pelo problema: lojas e concessionárias precisam de uma fonte única de estoque que consiga publicar veículos em vários marketplaces.
+2. Mostre a estrutura de monorepo e explique por que Laravel e Go estão no mesmo projeto.
+3. Abra a listagem de veículos do Laravel em `/vehicles`.
+4. Abra a página de detalhe de um veículo e mostre o resumo atual por provider.
+5. Mostre o histórico de integrações abaixo do resumo.
+6. Acione `POST /api/vehicles/{vehicle}/sync`.
+7. Mostre os novos logs e explique os status por provider.
+8. Envie um payload de callback para `POST /api/integration-callbacks`.
+9. Feche mostrando `docs/ARCHITECTURE.md`, `docs/LARAVEL_GO_CONTRACT.md` e o plano do futuro hub Go.
 
-## Key Decisions
+## Decisões Principais
 
-- Laravel is the main backend because the role evaluates Laravel and because it is strong for APIs, validation, migrations, and simple panels.
-- Go is planned for the integration hub because provider adapters, retries, and external calls are a good fit for a focused service.
-- Real marketplace APIs are intentionally out of scope for this first phase because credentials and approval processes would distract from architecture.
-- The vehicle model is canonical so provider-specific rules do not leak into the core application.
-- Integration logs are persisted because integration products need auditability and operational visibility.
+- Laravel é o backend principal porque a vaga avalia Laravel e porque ele é forte para APIs, validação, migrations, persistência e telas simples.
+- Go foi planejado para o hub de integração porque adapters de providers, retries e chamadas externas combinam bem com um serviço focado.
+- APIs reais de marketplaces estão fora do escopo inicial porque credenciais, aprovações e ambientes de homologação desviariam o foco da arquitetura.
+- O modelo de veículo é canônico para evitar que regras específicas de OLX, Mercado Livre ou iCarros vazem para o domínio principal.
+- Logs de integração são persistidos porque produtos de integração precisam de rastreabilidade, suporte e visibilidade operacional.
+- O contrato Laravel-Go foi documentado antes da implementação Go para evitar acoplamento improvisado entre serviços.
 
-## How To Explain Laravel
+## Como Explicar o Papel do Laravel
 
-Laravel owns the business-facing part of the product:
+Laravel concentra a parte de negócio e apresentação do produto:
 
-- Vehicle CRUD.
-- Validation.
-- Database model.
-- API contract.
-- Web visibility.
-- Integration status history.
+- CRUD de veículos.
+- Validação de entrada.
+- Modelo de banco.
+- Contrato da API.
+- Visibilidade web.
+- Histórico de status de integração.
+- Endpoint de callback para atualizações futuras vindas do Go.
 
-The code is split into controllers, form requests, resources, models, and services so each layer has a clear responsibility.
+O código está dividido em controllers, form requests, resources, models e services para que cada camada tenha uma responsabilidade clara.
 
-## How To Explain Future Go
+## Como Explicar o Futuro Go
 
-The Go hub will become a provider execution layer.
+O hub Go será a camada de execução de providers.
 
-It should receive a canonical vehicle payload from Laravel, map that payload to each provider, handle retries or provider-specific errors, and call Laravel back when the final status changes.
+Ele deverá receber um payload canônico de veículo vindo do Laravel, mapear esse payload para cada provider, lidar com retries e erros específicos, e chamar o Laravel de volta quando o status final mudar.
 
-## Questions An Evaluator May Ask
+## Perguntas Que o Avaliador Pode Fazer
 
-**Why not integrate real OLX or Mercado Livre now?**
+**Por que não integrar OLX ou Mercado Livre de verdade agora?**
 
-Because this phase is about architecture and contract design. Real integrations usually need credentials, approval, OAuth, and provider-specific test environments.
+Porque esta fase é sobre arquitetura, contrato e fluxo demonstrável. Integrações reais normalmente exigem credenciais, aprovação, OAuth e ambientes de teste específicos por provider.
 
-**Why keep integration logs instead of only the latest status?**
+**Por que manter logs de integração em vez de só o status atual?**
 
-Logs preserve operational history, make support easier, and show why a vehicle is blocked or failed.
+Logs preservam histórico operacional, facilitam suporte e mostram por que um veículo ficou bloqueado, falhou ou exige ação.
 
-**Why put the simulated hub client in Laravel?**
+**Por que o client simulado do hub está no Laravel?**
 
-It keeps the end-to-end product demonstrable while preserving a clear replacement point for the future Go service.
+Porque isso mantém o produto demonstrável de ponta a ponta, mas preserva um ponto claro de substituição para o futuro serviço Go: `IntegrationHubClient`.
 
-**What would change in production?**
+**O que mudaria em produção?**
 
-Add authentication, authorization, background jobs, retries, webhook signatures, observability, and real HTTP calls to the Go hub.
+Entrariam autenticação, autorização, filas/background jobs, retries reais, assinatura de webhooks, observabilidade e chamadas HTTP reais para o hub Go.
 
-## Current Limitations
+## Limitações Atuais
 
-- No authentication in this phase.
-- No real provider calls.
-- No queue workers yet.
-- No webhook signature validation yet.
-- Docker is only a light placeholder, not a production setup.
+- Ainda não há autenticação de usuário.
+- Ainda não há chamadas reais para providers.
+- Ainda não há workers de fila.
+- Ainda não há validação de assinatura/token no callback.
+- Docker está preparado para desenvolvimento/validação, não como setup final de produção.
+- O hub Go ainda não foi implementado.
 
-## Future Improvements
+## Melhorias Futuras
 
-- Implement the Go integration hub.
-- Add queued sync jobs.
-- Add provider adapter contracts in Go.
-- Add callback signature validation.
-- Add admin authentication.
-- Add observability for integration failures and retry counts.
+- Implementar o hub de integração em Go.
+- Trocar a simulação do Laravel por chamada HTTP real para o Go.
+- Adicionar jobs de sincronização em fila.
+- Criar contratos/adapters de providers no Go.
+- Adicionar validação de assinatura/token nos callbacks.
+- Adicionar autenticação administrativa.
+- Adicionar observabilidade para falhas de integração e contagem de retries.
