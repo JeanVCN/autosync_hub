@@ -10,10 +10,11 @@ services:
       - .:/app
     ports:
       - "8000:8000"
-    command: php artisan serve --host=0.0.0.0 --port=8000
+    command: php -S 0.0.0.0:8000 -t public public/index.php
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
+      DB_URL: pgsql://autosync_hub:secret@postgres:5432/autosync_hub
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: "5432"

@@ -18,12 +18,19 @@ Phase 7 — Provider Adapter Design and Production Hardening
 Status atual:
 
 ```text
-Pending
+Delivery-ready demo, Phase 7 partially completed
 ```
 
 Objetivo da fase atual:
 
 Preparar o hub Go para evoluir de providers simulados para adapters reais com seguranca, retries e observabilidade.
+
+Estado de entrega em 2026-07-09:
+
+- Projeto pronto para entrega demonstrativa por link de repositório.
+- README principal revisado para explicar como avaliar rapidamente sem apresentação.
+- Laravel, Go, Docker Compose, migrations, seeders, testes e rotas foram validados.
+- A Fase 7 ficou parcialmente concluída: adapters, retries/backoff e callback token validation estão prontos; observabilidade e limites para APIs reais permanecem como evolução futura.
 
 ## Phase 1 — Laravel Foundation
 
@@ -80,7 +87,7 @@ Checklist:
 - Rodar `composer install`.
 - Criar `.env` local.
 - Gerar `APP_KEY`.
-- Criar banco SQLite local.
+- Subir PostgreSQL local via Docker.
 - Rodar migrations.
 - Rodar seeders.
 - Rodar testes automatizados.
@@ -116,7 +123,6 @@ cd apps/backend-laravel
 composer install
 cp .env.example .env
 php artisan key:generate
-touch database/database.sqlite
 php artisan migrate --seed
 php artisan test
 php artisan serve
@@ -186,7 +192,7 @@ Completed
 
 Objetivo:
 
-Definir o contrato exato entre Laravel e o futuro Integration Hub em Go.
+Definir o contrato exato entre Laravel e o Integration Hub em Go.
 
 Possiveis entregas:
 
@@ -201,7 +207,7 @@ Possiveis entregas:
 Resultado da validacao em 2026-07-09:
 
 - Criado `docs/LARAVEL_GO_CONTRACT.md`.
-- Definido endpoint futuro `POST /sync-requests` no Go.
+- Definido endpoint `POST /sync-requests` no Go.
 - Definidos headers de contrato: `X-Contract-Version`, `X-Request-Id`, `Idempotency-Key` e `Authorization`.
 - Definidos payloads de sync, resposta imediata, callback de sucesso e callback de falha.
 - Definidas estrategias de idempotencia, timeout, retry, seguranca e versionamento.
@@ -331,6 +337,18 @@ Resultado parcial em 2026-07-09:
 - Adicionada validacao opcional de token no callback Laravel usando `Authorization: Bearer <token>`.
 - `go test ./...` concluiu com sucesso usando `GOCACHE=/tmp/autosync-go-cache`.
 
+Validação final de entrega em 2026-07-09:
+
+- `docker compose config`
+- `docker compose build backend-laravel`
+- `docker compose run --rm --no-deps backend-laravel composer validate`
+- `docker compose run --rm --no-deps backend-laravel php artisan migrate:fresh --seed`
+- `docker compose run --rm --no-deps backend-laravel php artisan test`
+- `docker compose run --rm --no-deps backend-laravel php artisan route:list --except-vendor`
+- Laravel HTTP smoke: `GET /vehicles` e `GET /api/vehicles` retornaram HTTP 200 em `127.0.0.1:18000`.
+- Go HTTP smoke: `GET /healthz` retornou HTTP 200 em `127.0.0.1:18080`.
+- `GOCACHE=/tmp/autosync-go-cache go test ./...`
+
 Critério de entrada:
 
 Laravel chamando Go por HTTP em fluxo validado.
@@ -354,6 +372,7 @@ docs/PROJECT_MEMORY.md
 Se o projeto estiver na Fase 2, o proximo comando provavelmente sera algum destes:
 
 ```bash
+docker compose up -d postgres
 cd apps/backend-laravel
 composer install
 php artisan migrate --seed
@@ -363,7 +382,7 @@ php artisan serve
 
 ## Current Next Step
 
-Continuar a Fase 7:
+Projeto pronto para entrega demonstrativa. Se continuar evoluindo:
 
 ```text
 adicionar observabilidade basica e documentar limites antes de APIs externas

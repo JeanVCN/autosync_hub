@@ -3,7 +3,7 @@
 AutoSync Hub is organized as a monorepo because the product has one business flow split across two technical responsibilities:
 
 - Laravel owns the main backend, vehicle records, API, web presentation, and integration status history.
-- Go will later own provider execution, marketplace adapters, retries, and external API communication.
+- Go owns provider execution boundaries, marketplace adapters, retries, callbacks, and future external API communication.
 
 Keeping both applications in one repository makes the integration contract visible and easy to review during a technical presentation.
 
@@ -22,17 +22,18 @@ It provides:
 
 Controllers stay thin. Validation is handled by Form Requests, response shape by Resources, and sync behavior by services under `App\Services\IntegrationHub`.
 
-## Future Go Role
+## Go Integration Hub Role
 
-`apps/integration-hub-go` will become the integration hub.
+`apps/integration-hub-go` is the integration hub.
 
-Expected responsibilities:
+Current and expected responsibilities:
 
 - Receive sync requests from Laravel.
-- Convert canonical vehicles into provider-specific payloads.
-- Execute provider adapters for OLX, Mercado Livre, iCarros, and future marketplaces.
-- Handle provider retries and status checks.
-- Send callbacks to Laravel when final statuses change.
+- Validate canonical sync payloads.
+- Execute simulated provider adapters for OLX, Mercado Livre, and iCarros.
+- Keep a `ProviderAdapter` boundary ready for real marketplace clients.
+- Handle provider retries/backoff and future status checks.
+- Send callbacks to Laravel when provider statuses change.
 
 ## Canonical Vehicle Model
 

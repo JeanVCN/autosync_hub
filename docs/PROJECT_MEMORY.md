@@ -71,10 +71,11 @@ AutoSync Hub demonstrates a professional backend and integration architecture fo
 - The Compose PostgreSQL service is exposed on host port `5433` and keeps port `5432` only inside the Docker network to avoid conflicts with local PostgreSQL installations.
 - Started Phase 7 on 2026-07-09: the Go hub now has a `ProviderAdapter` boundary, registers simulated adapters per provider, and rejects supported providers when no adapter is configured.
 - Continued Phase 7 on 2026-07-09: Go provider adapter errors now use configurable retries/backoff, and Laravel callbacks require `Authorization: Bearer <token>` when `INTEGRATION_HUB_TOKEN` is configured.
+- Closed the repository as a delivery-ready demo on 2026-07-09: README was revised for repository-link review, Docker Compose config/build passed, PostgreSQL migrations/seeders passed, Laravel tests passed with 13 tests and 47 assertions, route list exposed 12 project routes, Laravel HTTP smoke returned 200 for `/vehicles` and `/api/vehicles`, Go HTTP smoke returned 200 for `/healthz`, and Go tests passed.
 
 ## Pending Tasks
 
-- Continue Phase 7 from `docs/DEVELOPMENT_ROADMAP.md`.
+- Optional continuation from Phase 7 in `docs/DEVELOPMENT_ROADMAP.md`.
 - Add basic observability for provider calls and callbacks.
 - Document limits before integrating real marketplace APIs.
 - Keep PostgreSQL as the default development database and use SQLite only for isolated automated tests.

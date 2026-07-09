@@ -35,7 +35,7 @@ O pacote `internal/sync` define a interface `ProviderAdapter`:
 ```go
 type ProviderAdapter interface {
 	Name() string
-	Process(ctx context.Context, request SyncRequest) ProviderResult
+	Process(ctx context.Context, request SyncRequest) (ProviderResult, error)
 }
 ```
 

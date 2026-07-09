@@ -3,7 +3,7 @@
 use Illuminate\Support\Str;
 
 return [
-    'default' => env('DB_CONNECTION', 'pgsql'),
+    'default' => getenv('DB_CONNECTION') ?: env('DB_CONNECTION', 'pgsql'),
     'connections' => [
         'sqlite' => [
             'driver' => 'sqlite',
@@ -30,17 +30,17 @@ return [
         ],
         'pgsql' => [
             'driver' => 'pgsql',
-            'url' => env('DB_URL'),
-            'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '5432'),
-            'database' => env('DB_DATABASE', 'autosync_hub'),
-            'username' => env('DB_USERNAME', 'autosync_hub'),
-            'password' => env('DB_PASSWORD', 'secret'),
-            'charset' => env('DB_CHARSET', 'utf8'),
+            'url' => getenv('DB_URL') ?: env('DB_URL'),
+            'host' => getenv('DB_HOST') ?: env('DB_HOST', '127.0.0.1'),
+            'port' => getenv('DB_PORT') ?: env('DB_PORT', '5432'),
+            'database' => getenv('DB_DATABASE') ?: env('DB_DATABASE', 'autosync_hub'),
+            'username' => getenv('DB_USERNAME') ?: env('DB_USERNAME', 'autosync_hub'),
+            'password' => getenv('DB_PASSWORD') ?: env('DB_PASSWORD', 'secret'),
+            'charset' => getenv('DB_CHARSET') ?: env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => env('DB_SCHEMA', 'public'),
-            'sslmode' => env('DB_SSLMODE', 'prefer'),
+            'search_path' => getenv('DB_SCHEMA') ?: env('DB_SCHEMA', 'public'),
+            'sslmode' => getenv('DB_SSLMODE') ?: env('DB_SSLMODE', 'prefer'),
         ],
     ],
     'migrations' => [
