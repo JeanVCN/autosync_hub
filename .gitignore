@@ -14,3 +14,5 @@ storage/framework/views/*
 database/database.sqlite
 .phpunit.result.cache
 .DS_Store
+docs/LARAVEL_FOR_GO_DEVELOPERS.md
+docs/PRESENTATION_GUIDE.md
