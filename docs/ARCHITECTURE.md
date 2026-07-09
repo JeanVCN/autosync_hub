@@ -48,4 +48,4 @@ This makes the demo easy to inspect and creates an audit trail that would matter
 
 ## Current Tradeoff
 
-The first version simulates hub responses in Laravel through `IntegrationHubClient`. This is intentional: it demonstrates the full product flow without depending on external credentials or unfinished marketplace integrations.
+Laravel now calls the Go Integration Hub over HTTP through `IntegrationHubClient`. The hub still simulates provider execution, which keeps the full product flow demonstrable without depending on external credentials or marketplace approval processes.

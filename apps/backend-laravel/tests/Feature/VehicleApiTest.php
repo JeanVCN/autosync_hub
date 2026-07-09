@@ -7,6 +7,7 @@ use App\Enums\IntegrationStatus;
 use App\Models\IntegrationLog;
 use App\Models\Vehicle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class VehicleApiTest extends TestCase
@@ -47,6 +48,31 @@ class VehicleApiTest extends TestCase
     {
         $vehicle = Vehicle::factory()->create(['external_code' => 'CAR-901']);
 
+        Http::fake([
+            'http://localhost:8080/sync-requests' => Http::response([
+                'request_id' => 'hub-request-1',
+                'status' => 'accepted',
+                'message' => 'Sync request accepted for processing',
+                'accepted_providers' => [IntegrationProvider::Olx->value, IntegrationProvider::MercadoLivre->value],
+                'results' => [
+                    [
+                        'provider' => IntegrationProvider::Olx->value,
+                        'operation' => 'publish',
+                        'status' => IntegrationStatus::Published->value,
+                        'external_reference' => 'OLX-CAR-901',
+                        'response_payload' => ['message' => 'ok'],
+                    ],
+                    [
+                        'provider' => IntegrationProvider::MercadoLivre->value,
+                        'operation' => 'publish',
+                        'status' => IntegrationStatus::Processing->value,
+                        'external_reference' => 'MERCADOLIVRE-CAR-901',
+                        'response_payload' => ['message' => 'processing'],
+                    ],
+                ],
+            ], 202),
+        ]);
+
         $this->postJson("/api/vehicles/{$vehicle->id}/sync", [
             'providers' => [IntegrationProvider::Olx->value, IntegrationProvider::MercadoLivre->value],
         ])->assertOk()
@@ -56,6 +82,45 @@ class VehicleApiTest extends TestCase
             ->assertJsonCount(2, 'data.results');
 
         $this->assertDatabaseCount('integration_logs', 4);
+
+        Http::assertSent(function ($request): bool {
+            return $request->url() === 'http://localhost:8080/sync-requests'
+                && $request->hasHeader('X-Contract-Version', '2026-07-09')
+                && $request->hasHeader('X-Request-Id')
+                && $request->hasHeader('Idempotency-Key')
+                && $request['operation'] === 'publish'
+                && $request['vehicle']['external_code'] === 'CAR-901';
+        });
+    }
+
+    public function test_it_records_failed_logs_when_the_integration_hub_rejects_the_request(): void
+    {
+        $vehicle = Vehicle::factory()->create(['external_code' => 'CAR-903']);
+
+        Http::fake([
+            'http://localhost:8080/sync-requests' => Http::response([
+                'request_id' => 'hub-request-2',
+                'status' => 'rejected',
+                'message' => 'Request contains invalid fields',
+                'errors' => [
+                    'providers' => ['olx is temporarily unavailable'],
+                ],
+            ], 422),
+        ]);
+
+        $this->postJson("/api/vehicles/{$vehicle->id}/sync", [
+            'providers' => [IntegrationProvider::Olx->value],
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'rejected')
+            ->assertJsonPath('data.results.0.status', 'failed')
+            ->assertJsonPath('data.results.0.error_message', 'Request contains invalid fields');
+
+        $this->assertDatabaseHas('integration_logs', [
+            'vehicle_id' => $vehicle->id,
+            'provider' => IntegrationProvider::Olx->value,
+            'status' => IntegrationStatus::Failed->value,
+            'error_message' => 'Request contains invalid fields',
+        ]);
     }
 
     public function test_it_rejects_invalid_sync_providers(): void

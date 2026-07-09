@@ -283,12 +283,11 @@ Expected Go status codes:
 - `500 Internal Server Error`: unexpected hub failure.
 - `503 Service Unavailable`: hub temporarily unavailable.
 
-Laravel behavior planned for Phase 6:
+Laravel behavior implemented in Phase 6:
 
 - On `202`, persist processing logs.
 - On `400`, `409`, or `422`, persist rejected/failed logs with error details.
-- On `401`, fail fast and surface configuration/security issue.
-- On `500` or `503`, persist failed logs and make retry strategy explicit.
+- On `401`, `500`, `503`, or connection failure, persist failed logs for the requested providers.
 
 ### Go calling Laravel
 
@@ -364,12 +363,26 @@ When fields or behavior change incompatibly:
 - keep Laravel and Go compatible during migration;
 - add tests for old/new behavior if both are temporarily supported.
 
-## Current Implementation Gap
+## Current Implementation Status
 
-Laravel currently simulates the Go hub in:
+The Go hub foundation now exists in:
+
+```text
+apps/integration-hub-go
+```
+
+It implements:
+
+- `GET /healthz`
+- `POST /sync-requests`
+- simulated provider processing
+- optional service-token authorization
+- callback dispatch to Laravel
+
+Laravel now calls the Go hub from:
 
 ```text
 apps/backend-laravel/app/Services/IntegrationHub/IntegrationHubClient.php
 ```
 
-Phase 6 should replace the simulation with a real HTTP client that follows this contract.
+Provider adapters are still simulated inside the Go hub. A later phase should replace those simulations with real provider adapters.

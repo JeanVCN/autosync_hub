@@ -126,7 +126,8 @@ Validation notes:
 
 - Unknown providers return HTTP 422.
 - If `providers` is omitted, all supported providers are used.
-- This endpoint still uses the simulated Laravel client until the Go hub exists.
+- This endpoint calls the Go Integration Hub through `INTEGRATION_HUB_URL`.
+- Provider execution is still simulated inside the Go hub until real marketplace adapters are added.
 
 ## Vehicle Integration Summary
 

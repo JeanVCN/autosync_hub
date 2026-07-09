@@ -2,10 +2,11 @@
 
 namespace App\Services\IntegrationHub;
 
-use App\Enums\IntegrationProvider;
 use App\Enums\IntegrationStatus;
 use App\Models\Vehicle;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 class IntegrationHubClient
@@ -33,21 +34,52 @@ class IntegrationHubClient
     public function syncVehicle(Vehicle $vehicle, array $providers): array
     {
         $requestId = (string) Str::uuid();
+        $idempotencyKey = $this->buildIdempotencyKey($vehicle, $providers);
+        $payload = $this->buildPayload($vehicle, $providers, $requestId, $idempotencyKey);
 
-        return [
+        $metadata = [
             'contract_version' => $this->contractVersion,
             'request_id' => $requestId,
-            'idempotency_key' => $this->buildIdempotencyKey($vehicle, $providers),
+            'idempotency_key' => $idempotencyKey,
             'hub_url' => $this->baseUrl,
             'timeout_seconds' => $this->timeoutSeconds,
             'auth_configured' => filled($this->token),
             'callback_url' => $this->callbackUrl,
             'vehicle_id' => $vehicle->id,
             'vehicle_external_code' => $vehicle->external_code,
-            'results' => collect($providers)
-                ->map(fn (string $provider): array => $this->simulateProviderResult($vehicle, $provider))
-                ->values()
-                ->all(),
+        ];
+
+        try {
+            $response = Http::acceptJson()
+                ->asJson()
+                ->timeout($this->timeoutSeconds)
+                ->withHeaders($this->headers($requestId, $idempotencyKey))
+                ->post($this->syncEndpoint(), $payload);
+        } catch (ConnectionException $exception) {
+            return $metadata + [
+                'status' => 'failed',
+                'message' => 'Integration Hub is unavailable.',
+                'errors' => ['hub' => [$exception->getMessage()]],
+                'results' => $this->failedResults($providers, 'Integration Hub is unavailable.'),
+            ];
+        }
+
+        $body = $response->json() ?? [];
+
+        if ($response->failed()) {
+            return $metadata + [
+                'status' => $body['status'] ?? 'failed',
+                'message' => $body['message'] ?? 'Integration Hub rejected the sync request.',
+                'errors' => $body['errors'] ?? ['hub' => ['Unexpected hub error.']],
+                'results' => $this->failedResults($providers, $body['message'] ?? 'Integration Hub rejected the sync request.'),
+            ];
+        }
+
+        return $metadata + [
+            'status' => $body['status'] ?? 'accepted',
+            'message' => $body['message'] ?? 'Sync request accepted for processing',
+            'accepted_providers' => $body['accepted_providers'] ?? $providers,
+            'results' => $body['results'] ?? [],
         ];
     }
 
@@ -60,27 +92,69 @@ class IntegrationHubClient
         ]));
     }
 
-    private function simulateProviderResult(Vehicle $vehicle, string $provider): array
+    private function buildPayload(Vehicle $vehicle, array $providers, string $requestId, string $idempotencyKey): array
     {
-        if ($provider === IntegrationProvider::Icarros->value && blank($vehicle->version)) {
-            return [
-                'provider' => $provider,
-                'status' => IntegrationStatus::Failed->value,
-                'external_reference' => null,
-                'error_message' => 'Version field is required by provider',
-            ];
+        return [
+            'contract_version' => $this->contractVersion,
+            'request_id' => $requestId,
+            'idempotency_key' => $idempotencyKey,
+            'callback_url' => $this->callbackUrl,
+            'operation' => 'publish',
+            'providers' => $providers,
+            'vehicle' => [
+                'id' => $vehicle->id,
+                'external_code' => $vehicle->external_code,
+                'brand' => $vehicle->brand,
+                'model' => $vehicle->model,
+                'version' => $vehicle->version,
+                'year' => $vehicle->year,
+                'model_year' => $vehicle->model_year,
+                'price' => (float) $vehicle->price,
+                'mileage' => $vehicle->mileage,
+                'fuel_type' => $vehicle->fuel_type,
+                'transmission' => $vehicle->transmission,
+                'color' => $vehicle->color,
+                'description' => $vehicle->description,
+                'status' => $vehicle->status->value,
+                'updated_at' => $vehicle->updated_at?->toISOString(),
+            ],
+        ];
+    }
+
+    private function headers(string $requestId, string $idempotencyKey): array
+    {
+        $headers = [
+            'X-Contract-Version' => $this->contractVersion,
+            'X-Request-Id' => $requestId,
+            'Idempotency-Key' => $idempotencyKey,
+        ];
+
+        if (filled($this->token)) {
+            $headers['Authorization'] = 'Bearer '.$this->token;
         }
 
-        $status = match ($provider) {
-            IntegrationProvider::MercadoLivre->value => IntegrationStatus::Processing->value,
-            default => IntegrationStatus::Published->value,
-        };
+        return $headers;
+    }
 
-        return [
-            'provider' => $provider,
-            'status' => $status,
-            'external_reference' => strtoupper(Str::slug($provider, '')).'-'.$vehicle->id.str_pad((string) random_int(1, 999), 3, '0', STR_PAD_LEFT),
-            'error_message' => null,
-        ];
+    private function syncEndpoint(): string
+    {
+        return Str::finish($this->baseUrl, '/').'sync-requests';
+    }
+
+    private function failedResults(array $providers, string $message): array
+    {
+        return collect($providers)
+            ->map(fn (string $provider): array => [
+                'provider' => $provider,
+                'operation' => 'publish',
+                'status' => IntegrationStatus::Failed->value,
+                'external_reference' => null,
+                'error_message' => $message,
+                'response_payload' => [
+                    'message' => $message,
+                ],
+            ])
+            ->values()
+            ->all();
     }
 }

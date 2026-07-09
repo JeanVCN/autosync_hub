@@ -25,7 +25,7 @@ autosync_hub/
 ## Funcionalidades Atuais
 
 - API CRUD de veículos.
-- Endpoint de sincronização com resultados simulados por provider.
+- Endpoint de sincronização integrado ao hub Go.
 - Histórico de logs de integração por provider e operação.
 - Endpoint de callback preparado para atualizações futuras vindas do hub Go.
 - Endpoint de resumo atual de integração por provider.
@@ -33,6 +33,7 @@ autosync_hub/
 - Dados seedados para demonstração de veículos e logs.
 - Testes de feature para os principais fluxos da API.
 - Contrato Laravel-Go documentado para a próxima etapa.
+- Fundação do hub Go com endpoint `/sync-requests` e providers simulados.
 
 ## Requisitos
 
@@ -87,6 +88,8 @@ docker run --rm --user "$(id -u):$(id -g)" \
 
 ## Endpoints Principais
 
+Laravel:
+
 - `GET /api/vehicles`
 - `POST /api/vehicles`
 - `GET /api/vehicles/{vehicle}`
@@ -97,10 +100,15 @@ docker run --rm --user "$(id -u):$(id -g)" \
 - `GET /api/vehicles/{vehicle}/integration-logs`
 - `POST /api/integration-callbacks`
 
+Go Integration Hub:
+
+- `GET /healthz`
+- `POST /sync-requests`
+
 ## Status
 
 A base Laravel foi validada com dependências Composer, migrations SQLite, seeders, testes automatizados e checagens manuais web/API. O fluxo de integração Laravel foi endurecido com resumo por provider e validações negativas, e o contrato Laravel-Go já está documentado.
 
-A próxima fase é implementar a fundação do hub Go em `apps/integration-hub-go`.
+A fundação do hub Go já foi implementada em `apps/integration-hub-go`, e o Laravel já chama esse hub por HTTP no fluxo de sincronização. Os providers ainda são simulados dentro do Go, o que preserva a demo sem depender de APIs reais.
 
 Consulte `docs/` para arquitetura, contratos de API, contrato Laravel-Go, fluxo de integração, guia de apresentação e memória viva do projeto.

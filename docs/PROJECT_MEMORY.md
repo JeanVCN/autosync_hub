@@ -10,6 +10,7 @@ AutoSync Hub demonstrates a professional backend and integration architecture fo
 - Vehicle CRUD API.
 - Integration log model and history API.
 - Simulated vehicle synchronization with provider-level results.
+- Go Integration Hub foundation with sync request endpoint and simulated providers.
 - Callback endpoint for future hub status updates.
 - Blade screens for listing vehicles and showing integration history.
 - Demo seed data.
@@ -21,7 +22,7 @@ AutoSync Hub demonstrates a professional backend and integration architecture fo
 - Real marketplace API calls.
 - OAuth or marketplace credential handling.
 - Scraping.
-- Full Go service implementation.
+- Real provider implementation in Go.
 - Authentication and user management.
 - Production Docker setup.
 - Queue workers and retry orchestration.
@@ -30,7 +31,7 @@ AutoSync Hub demonstrates a professional backend and integration architecture fo
 
 - Use a monorepo so the Laravel backend and future Go hub can evolve together while keeping their responsibilities explicit.
 - Start with Laravel because the target opportunity focuses on Laravel and the first phase needs CRUD, validation, migrations, API routes, and simple screens.
-- Keep the Go service as a documented placeholder in this phase to avoid pretending external integrations exist before contracts are stable.
+- Keep the Go service focused on provider execution and callbacks while Laravel remains the canonical business backend.
 - Use PHP enums for vehicle statuses, providers, operations, and integration statuses so accepted values are explicit and easy to validate.
 - Place sync behavior in `VehicleSyncService` and hub communication in `IntegrationHubClient` so controllers remain thin.
 - Simulate provider results through `IntegrationHubClient` as a temporary adapter point that can later become a real HTTP client.
@@ -64,13 +65,13 @@ AutoSync Hub demonstrates a professional backend and integration architecture fo
 - Added `mockery/mockery` to `require-dev` because Laravel feature tests required Mockery during teardown.
 - Completed Phase 3 integration hardening on 2026-07-09: added provider summary endpoint, detail-page summary display, invalid payload tests, callback not-found handling tests, and curl examples in API contracts.
 - Completed Phase 4 Laravel-Go contract design on 2026-07-09: added `docs/LARAVEL_GO_CONTRACT.md`, integration config for timeout/token/callback/contract version, and simulated contract metadata in `IntegrationHubClient`.
+- Completed Phase 5 Go Integration Hub foundation on 2026-07-09: added a Go HTTP service with `/healthz`, `/sync-requests`, simulated providers, callback dispatcher, validation, tests, Docker Compose integration, and manual HTTP validation on `PORT=18080`.
+- Completed Phase 6 Laravel-Go HTTP integration on 2026-07-09: `IntegrationHubClient` now calls `POST /sync-requests`, persists provider results returned by Go, records failed logs on hub rejection/unavailability, and was manually validated end-to-end with Laravel on `PORT=18000` and Go on `PORT=18080`.
 
 ## Pending Tasks
 
-- Start Phase 5 from `docs/DEVELOPMENT_ROADMAP.md`.
-- Create the Go Integration Hub foundation under `apps/integration-hub-go`.
-- Replace simulated hub behavior with a real HTTP client when the Go service exists.
-- Implement the Go integration hub.
+- Decide the next phase from `docs/DEVELOPMENT_ROADMAP.md`.
+- Replace Go provider simulations with real adapter boundaries when ready.
 - Add authentication and webhook security before any production use.
 - Improve Docker setup with a Composer-capable PHP image or custom Dockerfile.
 
@@ -87,10 +88,17 @@ php artisan serve
 php artisan test
 ```
 
+```bash
+cd apps/integration-hub-go
+GOCACHE=/tmp/autosync-go-cache go test ./...
+GOCACHE=/tmp/autosync-go-cache go run ./cmd/api
+```
+
 ## Presentation Notes
 
 - Emphasize that the current phase is intentionally honest: it demonstrates contracts and flow without fake claims of real marketplace integration.
 - Show how Laravel owns the canonical domain and status visibility.
-- Show where the future Go hub will connect: `IntegrationHubClient`.
+- Show how Laravel calls the Go hub through `IntegrationHubClient`.
+- Show the Go hub endpoint `POST /sync-requests` as the integration boundary.
 - Explain that enums and form requests make provider/status values explicit and reviewable.
 - Use seeded vehicles to quickly demonstrate list, detail, sync, logs, and callback behavior.

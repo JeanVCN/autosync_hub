@@ -12,7 +12,7 @@ Ele deve ser atualizado sempre que uma fase avancar, uma decisao importante muda
 ## Current Phase
 
 ```text
-Phase 5 — Go Integration Hub Foundation
+Phase 7 — Provider Adapter Design and Production Hardening
 ```
 
 Status atual:
@@ -23,7 +23,7 @@ Pending
 
 Objetivo da fase atual:
 
-Criar o servico Go que assumira a responsabilidade de simular e depois executar providers.
+Preparar o hub Go para evoluir de providers simulados para adapters reais com seguranca, retries e observabilidade.
 
 ## Phase 1 — Laravel Foundation
 
@@ -217,7 +217,7 @@ Laravel validado e fluxo atual demonstravel.
 Status:
 
 ```text
-Pending
+Completed
 ```
 
 Objetivo:
@@ -229,10 +229,11 @@ Possivel estrutura:
 ```text
 apps/integration-hub-go/
   cmd/api/
-  internal/http/
+  internal/httpapi/
   internal/sync/
-  internal/providers/
+  internal/provider/
   internal/callback/
+  internal/config/
 ```
 
 Possiveis entregas:
@@ -244,6 +245,20 @@ Possiveis entregas:
 - Testes unitarios dos providers.
 - Documentacao de execucao local.
 
+Resultado da validacao em 2026-07-09:
+
+- Criado modulo Go em `apps/integration-hub-go`.
+- Criado endpoint `GET /healthz`.
+- Criado endpoint `POST /sync-requests`.
+- Criadas camadas `cmd/api`, `internal/httpapi`, `internal/sync`, `internal/provider`, `internal/callback` e `internal/config`.
+- Implementados providers simulados para `olx`, `mercado_livre` e `icarros`.
+- Implementado dispatcher HTTP de callback para o Laravel.
+- Implementada validacao de payload, providers e token opcional.
+- Adicionados testes de service, HTTP handler e provider simulator.
+- `go test ./...` concluiu com sucesso usando `GOCACHE=/tmp/autosync-go-cache`.
+- Validacao manual em `PORT=18080`: `GET /healthz` retornou HTTP 200 e `POST /sync-requests` retornou HTTP 202 com resultados simulados.
+- `docker-compose.yml` passou a incluir o servico `integration-hub-go`.
+
 Critério de entrada:
 
 Contrato Laravel-Go definido.
@@ -253,7 +268,7 @@ Contrato Laravel-Go definido.
 Status:
 
 ```text
-Pending
+Completed
 ```
 
 Objetivo:
@@ -268,9 +283,46 @@ Possiveis entregas:
 - Testes com client fake.
 - Docker Compose incluindo Laravel e Go.
 
+Resultado da validacao em 2026-07-09:
+
+- `IntegrationHubClient` passou a chamar `POST /sync-requests` no Go hub.
+- Laravel envia headers `X-Contract-Version`, `X-Request-Id`, `Idempotency-Key` e `Authorization` quando token estiver configurado.
+- Laravel envia payload canonico de veiculo, operation, providers, callback URL e metadados de contrato.
+- Laravel persiste resultados retornados pelo Go em `integration_logs`.
+- Laravel registra logs `failed` por provider quando o hub rejeita a request ou fica indisponivel.
+- Testes Laravel passaram a usar `Http::fake()` para validar request enviada ao hub.
+- Validacao manual ponta a ponta: Go em `PORT=18080`, Laravel em `PORT=18000`, `POST /api/vehicles/1/sync` retornou dados vindos do Go e callbacks chegaram em `POST /api/integration-callbacks`.
+- `php artisan test` concluiu com sucesso: 11 testes, 43 assertions.
+- `go test ./...` concluiu com sucesso usando `GOCACHE=/tmp/autosync-go-cache`.
+
 Critério de entrada:
 
 Go hub minimo funcionando localmente.
+
+## Phase 7 — Provider Adapter Design and Production Hardening
+
+Status:
+
+```text
+Pending
+```
+
+Objetivo:
+
+Preparar o sistema para sair de providers simulados para adapters reais sem comprometer o desenho atual.
+
+Possiveis entregas:
+
+- Definir interface de provider adapter no Go.
+- Separar simuladores dos adapters reais.
+- Adicionar retries/backoff no Go.
+- Adicionar webhook/token validation no Laravel callback.
+- Adicionar observabilidade basica para chamadas e callbacks.
+- Documentar limites antes de integrar marketplaces reais.
+
+Critério de entrada:
+
+Laravel chamando Go por HTTP em fluxo validado.
 
 ## Quick Resume Checklist
 
@@ -300,8 +352,8 @@ php artisan serve
 
 ## Current Next Step
 
-Iniciar a Fase 5:
+Iniciar a Fase 7:
 
 ```text
-criar a fundacao do servico Go de Integration Hub
+desenhar adapters reais e endurecer seguranca/retries antes de APIs externas
 ```
