@@ -24,9 +24,24 @@ cmd/api/              entrada HTTP do serviço
 internal/config/      leitura de variáveis de ambiente
 internal/httpapi/     rotas e handlers HTTP
 internal/sync/        contrato e orquestração do fluxo de sync
-internal/provider/    providers simulados
+internal/provider/    adapters simulados por provider
 internal/callback/    envio de callbacks para o Laravel
 ```
+
+## Provider Adapters
+
+O pacote `internal/sync` define a interface `ProviderAdapter`:
+
+```go
+type ProviderAdapter interface {
+	Name() string
+	Process(ctx context.Context, request SyncRequest) ProviderResult
+}
+```
+
+O serviço de sync recebe uma lista de adapters e monta um registro interno por nome. Hoje `internal/provider` registra adapters simulados para `olx`, `mercado_livre` e `icarros`.
+
+Quando uma integração real for adicionada, ela deve implementar essa mesma interface. Assim, o fluxo HTTP, validação, callbacks e contrato Laravel-Go continuam estáveis.
 
 ## Como Rodar
 
@@ -87,6 +102,8 @@ PORT=8080
 INTEGRATION_CONTRACT_VERSION=2026-07-09
 INTEGRATION_HUB_TOKEN=
 CALLBACK_TIMEOUT_SECONDS=5
+PROVIDER_MAX_ATTEMPTS=3
+PROVIDER_BACKOFF_MS=200
 ```
 
 `INTEGRATION_HUB_TOKEN` é opcional em ambiente local. Quando configurado, o endpoint `POST /sync-requests` exige:
@@ -94,3 +111,7 @@ CALLBACK_TIMEOUT_SECONDS=5
 ```text
 Authorization: Bearer <token>
 ```
+
+O mesmo token é enviado nos callbacks para o Laravel. No Laravel, quando `INTEGRATION_HUB_TOKEN` estiver configurado, `POST /api/integration-callbacks` também exige esse header.
+
+`PROVIDER_MAX_ATTEMPTS` e `PROVIDER_BACKOFF_MS` controlam retries de erros retornados por adapters reais. Os adapters simulados normalmente não retornam erro técnico, mas usam o mesmo fluxo.

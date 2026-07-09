@@ -7,18 +7,22 @@ import (
 )
 
 type Config struct {
-	Addr            string
-	ContractVersion string
-	ServiceToken    string
-	CallbackTimeout time.Duration
+	Addr                string
+	ContractVersion     string
+	ServiceToken        string
+	CallbackTimeout     time.Duration
+	ProviderMaxAttempts int
+	ProviderBackoff     time.Duration
 }
 
 func FromEnv() Config {
 	return Config{
-		Addr:            envOrDefault("PORT", ":8080"),
-		ContractVersion: envOrDefault("INTEGRATION_CONTRACT_VERSION", "2026-07-09"),
-		ServiceToken:    os.Getenv("INTEGRATION_HUB_TOKEN"),
-		CallbackTimeout: time.Duration(intEnvOrDefault("CALLBACK_TIMEOUT_SECONDS", 5)) * time.Second,
+		Addr:                envOrDefault("PORT", ":8080"),
+		ContractVersion:     envOrDefault("INTEGRATION_CONTRACT_VERSION", "2026-07-09"),
+		ServiceToken:        os.Getenv("INTEGRATION_HUB_TOKEN"),
+		CallbackTimeout:     time.Duration(intEnvOrDefault("CALLBACK_TIMEOUT_SECONDS", 5)) * time.Second,
+		ProviderMaxAttempts: intEnvOrDefault("PROVIDER_MAX_ATTEMPTS", 3),
+		ProviderBackoff:     time.Duration(intEnvOrDefault("PROVIDER_BACKOFF_MS", 200)) * time.Millisecond,
 	}
 }
 

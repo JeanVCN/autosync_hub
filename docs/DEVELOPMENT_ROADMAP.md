@@ -304,7 +304,7 @@ Go hub minimo funcionando localmente.
 Status:
 
 ```text
-Pending
+In Progress
 ```
 
 Objetivo:
@@ -313,12 +313,23 @@ Preparar o sistema para sair de providers simulados para adapters reais sem comp
 
 Possiveis entregas:
 
-- Definir interface de provider adapter no Go.
-- Separar simuladores dos adapters reais.
-- Adicionar retries/backoff no Go.
-- Adicionar webhook/token validation no Laravel callback.
+- Definir interface de provider adapter no Go. Concluido em 2026-07-09.
+- Separar simuladores dos adapters reais. Parcialmente concluido em 2026-07-09: o Go Hub agora registra adapters simulados por provider via `ProviderAdapter`.
+- Adicionar retries/backoff no Go. Concluido em 2026-07-09.
+- Adicionar webhook/token validation no Laravel callback. Concluido em 2026-07-09.
 - Adicionar observabilidade basica para chamadas e callbacks.
 - Documentar limites antes de integrar marketplaces reais.
+
+Resultado parcial em 2026-07-09:
+
+- Criada interface `ProviderAdapter` no pacote `internal/sync`.
+- `Service` passou a receber uma lista de adapters e indexa-los por `Name()`.
+- `internal/provider` passou a expor `NewSimulatedAdapters()` para registrar `olx`, `mercado_livre` e `icarros`.
+- `cmd/api` passou a construir o sync service com adapters simulados registrados.
+- Adicionado teste para provider suportado sem adapter configurado.
+- Adicionado retry/backoff configuravel para erros tecnicos retornados por provider adapters.
+- Adicionada validacao opcional de token no callback Laravel usando `Authorization: Bearer <token>`.
+- `go test ./...` concluiu com sucesso usando `GOCACHE=/tmp/autosync-go-cache`.
 
 Critério de entrada:
 
@@ -352,8 +363,8 @@ php artisan serve
 
 ## Current Next Step
 
-Iniciar a Fase 7:
+Continuar a Fase 7:
 
 ```text
-desenhar adapters reais e endurecer seguranca/retries antes de APIs externas
+adicionar observabilidade basica e documentar limites antes de APIs externas
 ```

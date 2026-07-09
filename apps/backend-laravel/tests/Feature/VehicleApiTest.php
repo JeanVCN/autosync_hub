@@ -168,6 +168,35 @@ class VehicleApiTest extends TestCase
         ]);
     }
 
+    public function test_it_rejects_integration_callback_when_token_is_configured_and_missing(): void
+    {
+        Config::set('services.integration_hub.token', 'secret-token');
+        Vehicle::factory()->create(['external_code' => 'CAR-902']);
+
+        $this->postJson('/api/integration-callbacks', [
+            'vehicle_external_code' => 'CAR-902',
+            'provider' => 'olx',
+            'operation' => 'publish',
+            'status' => 'published',
+        ])->assertUnauthorized()
+            ->assertJsonPath('message', 'Missing or invalid integration callback token.');
+    }
+
+    public function test_it_accepts_integration_callback_with_valid_token(): void
+    {
+        Config::set('services.integration_hub.token', 'secret-token');
+        Vehicle::factory()->create(['external_code' => 'CAR-902']);
+
+        $this->withHeader('Authorization', 'Bearer secret-token')
+            ->postJson('/api/integration-callbacks', [
+                'vehicle_external_code' => 'CAR-902',
+                'provider' => 'olx',
+                'operation' => 'publish',
+                'status' => 'published',
+            ])->assertOk()
+            ->assertJsonPath('data.provider', 'olx');
+    }
+
     public function test_it_rejects_invalid_integration_callback_payloads(): void
     {
         $this->postJson('/api/integration-callbacks', [

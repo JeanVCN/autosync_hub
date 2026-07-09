@@ -14,9 +14,11 @@ import (
 func main() {
 	cfg := config.FromEnv()
 
-	providerSimulator := provider.NewSimulator()
 	callbackDispatcher := callback.NewDispatcher(cfg.CallbackTimeout, cfg.ContractVersion, cfg.ServiceToken)
-	syncService := autosyncsync.NewService(providerSimulator, callbackDispatcher)
+	syncService := autosyncsync.NewServiceWithRetry(provider.NewSimulatedAdapters(), callbackDispatcher, autosyncsync.RetryPolicy{
+		MaxAttempts: cfg.ProviderMaxAttempts,
+		Backoff:     cfg.ProviderBackoff,
+	})
 	server := httpapi.NewServer(cfg, syncService)
 
 	log.Printf("AutoSync Integration Hub listening on %s", cfg.Addr)

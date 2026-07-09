@@ -190,6 +190,7 @@ Example:
 ```bash
 curl -X POST http://127.0.0.1:8000/api/integration-callbacks \
   -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <INTEGRATION_HUB_TOKEN>' \
   -d '{
     "vehicle_external_code": "CAR-001",
     "provider": "olx",
@@ -204,6 +205,7 @@ curl -X POST http://127.0.0.1:8000/api/integration-callbacks \
 
 Validation notes:
 
+- `Authorization: Bearer <INTEGRATION_HUB_TOKEN>` is required when `INTEGRATION_HUB_TOKEN` is configured.
 - Unknown providers, operations, or statuses return HTTP 422.
 - Unknown `vehicle_external_code` returns HTTP 404.
 - The received callback payload is stored in `request_payload`.

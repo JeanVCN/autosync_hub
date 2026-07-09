@@ -59,6 +59,8 @@ services:
       GOCACHE: /tmp/autosync-go-cache
       INTEGRATION_CONTRACT_VERSION: "2026-07-09"
       CALLBACK_TIMEOUT_SECONDS: "5"
+      PROVIDER_MAX_ATTEMPTS: "3"
+      PROVIDER_BACKOFF_MS: "200"
 
 volumes:
   postgres-data:

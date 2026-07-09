@@ -14,6 +14,30 @@ func NewSimulator() Simulator {
 	return Simulator{}
 }
 
+type SimulatedAdapter struct {
+	provider string
+}
+
+func NewSimulatedAdapters() []autosyncsync.ProviderAdapter {
+	return []autosyncsync.ProviderAdapter{
+		NewSimulatedAdapter("olx"),
+		NewSimulatedAdapter("mercado_livre"),
+		NewSimulatedAdapter("icarros"),
+	}
+}
+
+func NewSimulatedAdapter(provider string) SimulatedAdapter {
+	return SimulatedAdapter{provider: provider}
+}
+
+func (a SimulatedAdapter) Name() string {
+	return a.provider
+}
+
+func (a SimulatedAdapter) Process(ctx context.Context, request autosyncsync.SyncRequest) (autosyncsync.ProviderResult, error) {
+	return NewSimulator().Process(ctx, request, a.provider), nil
+}
+
 func (s Simulator) Process(ctx context.Context, request autosyncsync.SyncRequest, provider string) autosyncsync.ProviderResult {
 	_ = ctx
 

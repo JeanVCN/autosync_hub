@@ -5,14 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 )
 
 var (
-	ErrInvalidRequest = errors.New("invalid sync request")
+	ErrInvalidRequest      = errors.New("invalid sync request")
+	ErrProviderUnavailable = errors.New("provider adapter unavailable")
 )
 
-type Provider interface {
-	Process(ctx context.Context, request SyncRequest, provider string) ProviderResult
+type ProviderAdapter interface {
+	Name() string
+	Process(ctx context.Context, request SyncRequest) (ProviderResult, error)
 }
 
 type CallbackDispatcher interface {
@@ -20,19 +23,30 @@ type CallbackDispatcher interface {
 }
 
 type Service struct {
-	provider   Provider
+	adapters   map[string]ProviderAdapter
 	dispatcher CallbackDispatcher
+	retry      RetryPolicy
 }
 
-func NewService(provider Provider, dispatcher CallbackDispatcher) *Service {
+type RetryPolicy struct {
+	MaxAttempts int
+	Backoff     time.Duration
+}
+
+func NewService(adapters []ProviderAdapter, dispatcher CallbackDispatcher) *Service {
+	return NewServiceWithRetry(adapters, dispatcher, RetryPolicy{MaxAttempts: 1})
+}
+
+func NewServiceWithRetry(adapters []ProviderAdapter, dispatcher CallbackDispatcher, retry RetryPolicy) *Service {
 	return &Service{
-		provider:   provider,
+		adapters:   indexAdapters(adapters),
 		dispatcher: dispatcher,
+		retry:      normalizeRetryPolicy(retry),
 	}
 }
 
 func (s *Service) Handle(ctx context.Context, request SyncRequest) (SyncResponse, error) {
-	if validationErrors := validateRequest(request); len(validationErrors) > 0 {
+	if validationErrors := s.validateRequest(request); len(validationErrors) > 0 {
 		return SyncResponse{
 			RequestID: request.RequestID,
 			Status:    "rejected",
@@ -42,8 +56,8 @@ func (s *Service) Handle(ctx context.Context, request SyncRequest) (SyncResponse
 	}
 
 	results := make([]ProviderResult, 0, len(request.Providers))
-	for _, provider := range request.Providers {
-		result := s.provider.Process(ctx, request, provider)
+	for _, providerName := range request.Providers {
+		result := s.processProvider(ctx, request, providerName)
 		results = append(results, result)
 
 		if request.CallbackURL != "" && s.dispatcher != nil {
@@ -60,7 +74,93 @@ func (s *Service) Handle(ctx context.Context, request SyncRequest) (SyncResponse
 	}, nil
 }
 
-func validateRequest(request SyncRequest) map[string][]string {
+func (s *Service) processProvider(ctx context.Context, request SyncRequest, providerName string) ProviderResult {
+	adapter, ok := s.adapters[providerName]
+	if !ok {
+		return ProviderResult{
+			Provider:          providerName,
+			Operation:         request.Operation,
+			Status:            "failed",
+			ExternalReference: nil,
+			ErrorMessage:      ErrProviderUnavailable.Error(),
+			ResponsePayload: map[string]any{
+				"message": ErrProviderUnavailable.Error(),
+			},
+		}
+	}
+
+	var lastErr error
+	for attempt := 1; attempt <= s.retry.MaxAttempts; attempt++ {
+		if attempt > 1 && s.retry.Backoff > 0 {
+			if err := wait(ctx, s.retry.Backoff); err != nil {
+				lastErr = err
+				break
+			}
+		}
+
+		result, err := adapter.Process(ctx, request)
+		if err == nil {
+			if result.ResponsePayload == nil {
+				result.ResponsePayload = map[string]any{}
+			}
+			result.ResponsePayload["attempts"] = attempt
+
+			return result
+		}
+
+		lastErr = err
+	}
+
+	return ProviderResult{
+		Provider:          providerName,
+		Operation:         request.Operation,
+		Status:            "failed",
+		ExternalReference: nil,
+		ErrorMessage:      lastErr.Error(),
+		ResponsePayload: map[string]any{
+			"message":  lastErr.Error(),
+			"attempts": s.retry.MaxAttempts,
+		},
+	}
+}
+
+func indexAdapters(adapters []ProviderAdapter) map[string]ProviderAdapter {
+	indexed := make(map[string]ProviderAdapter, len(adapters))
+	for _, adapter := range adapters {
+		if adapter == nil || adapter.Name() == "" {
+			continue
+		}
+		indexed[adapter.Name()] = adapter
+	}
+
+	return indexed
+}
+
+func normalizeRetryPolicy(retry RetryPolicy) RetryPolicy {
+	if retry.MaxAttempts <= 0 {
+		retry.MaxAttempts = 1
+	}
+
+	if retry.Backoff < 0 {
+		retry.Backoff = 0
+	}
+
+	return retry
+}
+
+func wait(ctx context.Context, delay time.Duration) error {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
+func (s *Service) validateRequest(request SyncRequest) map[string][]string {
 	errs := map[string][]string{}
 
 	requiredString(errs, "contract_version", request.ContractVersion)
@@ -96,6 +196,11 @@ func validateRequest(request SyncRequest) map[string][]string {
 	for _, provider := range request.Providers {
 		if !slices.Contains([]string{"olx", "mercado_livre", "icarros"}, provider) {
 			errs["providers"] = append(errs["providers"], fmt.Sprintf("%s is not supported", provider))
+			continue
+		}
+
+		if _, ok := s.adapters[provider]; !ok {
+			errs["providers"] = append(errs["providers"], fmt.Sprintf("%s adapter is not configured", provider))
 		}
 	}
 

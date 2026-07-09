@@ -82,7 +82,7 @@ func testServer(token string) *Server {
 		ContractVersion: "2026-07-09",
 		ServiceToken:    token,
 	}
-	service := autosyncsync.NewService(provider.NewSimulator(), nil)
+	service := autosyncsync.NewService(provider.NewSimulatedAdapters(), nil)
 
 	return NewServer(cfg, service)
 }

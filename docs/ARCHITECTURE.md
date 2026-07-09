@@ -57,3 +57,7 @@ Automated tests still use SQLite in memory through `phpunit.xml`. This keeps tes
 ## Current Tradeoff
 
 Laravel now calls the Go Integration Hub over HTTP through `IntegrationHubClient`. The hub still simulates provider execution, which keeps the full product flow demonstrable without depending on external credentials or marketplace approval processes.
+
+The Go hub now hides those simulations behind provider adapters. The current adapters are simulated implementations for OLX, Mercado Livre, and iCarros, but the sync service only depends on the `ProviderAdapter` contract. This keeps the HTTP contract stable while future real marketplace clients are added behind the same boundary.
+
+Provider adapter errors are retried in Go with configurable attempts and backoff before a failed provider result is returned to Laravel. Callback security is also shared through `INTEGRATION_HUB_TOKEN`: when configured, Go sends it as a bearer token and Laravel requires it on `POST /api/integration-callbacks`.
