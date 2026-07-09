@@ -18,6 +18,32 @@
         <div class="panel"><span class="label">Transmission</span>{{ $vehicle->transmission ?? 'Not informed' }}</div>
     </section>
 
+    <h2>Current Integration Status</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Provider</th>
+                <th>Status</th>
+                <th>Operation</th>
+                <th>External ref</th>
+                <th>Attempts</th>
+                <th>Last attempt</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($integrationSummary as $summary)
+                <tr>
+                    <td>{{ $summary['provider'] }}</td>
+                    <td><span class="badge {{ $summary['status'] }}">{{ $summary['status'] }}</span></td>
+                    <td>{{ $summary['operation'] ?? '-' }}</td>
+                    <td>{{ $summary['external_reference'] ?? '-' }}</td>
+                    <td>{{ $summary['attempts'] }}</td>
+                    <td>{{ $summary['last_attempt_at'] ? \Illuminate\Support\Carbon::parse($summary['last_attempt_at'])->format('Y-m-d H:i') : '-' }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+
     <h2>Integration History</h2>
     <table>
         <thead>

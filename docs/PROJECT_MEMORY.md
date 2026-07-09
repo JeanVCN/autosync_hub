@@ -58,11 +58,17 @@ AutoSync Hub demonstrates a professional backend and integration architecture fo
 - Root README and docs created.
 - Local execution was not verified in this environment because `php` and `composer` commands are unavailable.
 - Added `docs/LARAVEL_FOR_GO_DEVELOPERS.md` as a learning guide that explains this Laravel project through comparisons with common Go backend patterns.
+- Added `docs/DEVELOPMENT_ROADMAP.md` to track phases, resume points, completion criteria, and next steps.
+- Completed Phase 2 runtime validation on 2026-07-09 using Docker image `composer:2`: dependencies installed, migrations and seeders ran, tests passed, and web/API routes were manually checked.
+- Updated Laravel dependency from `^11.0` to `^12.0` because Composer blocked Laravel 11 releases due to security advisories.
+- Added `mockery/mockery` to `require-dev` because Laravel feature tests required Mockery during teardown.
+- Completed Phase 3 integration hardening on 2026-07-09: added provider summary endpoint, detail-page summary display, invalid payload tests, callback not-found handling tests, and curl examples in API contracts.
+- Completed Phase 4 Laravel-Go contract design on 2026-07-09: added `docs/LARAVEL_GO_CONTRACT.md`, integration config for timeout/token/callback/contract version, and simulated contract metadata in `IntegrationHubClient`.
 
 ## Pending Tasks
 
-- Run `composer install` in an environment with PHP and Composer.
-- Run migrations, seeders, and tests locally.
+- Start Phase 5 from `docs/DEVELOPMENT_ROADMAP.md`.
+- Create the Go Integration Hub foundation under `apps/integration-hub-go`.
 - Replace simulated hub behavior with a real HTTP client when the Go service exists.
 - Implement the Go integration hub.
 - Add authentication and webhook security before any production use.

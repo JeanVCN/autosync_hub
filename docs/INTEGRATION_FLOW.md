@@ -43,3 +43,9 @@ The callback:
 When the Go hub is implemented, the simulated client should be replaced by an HTTP client that sends the canonical vehicle payload to `INTEGRATION_HUB_URL`.
 
 The Laravel contract should stay stable while provider-specific complexity moves to Go.
+
+The detailed service-to-service contract is documented in:
+
+```text
+docs/LARAVEL_GO_CONTRACT.md
+```

@@ -37,6 +37,7 @@ autosync_hub/
 - PHP 8.2 or newer.
 - Composer.
 - SQLite, MySQL, or PostgreSQL. SQLite is enough for the demo.
+- Docker, if you prefer the validated container workflow.
 
 ## Setup
 
@@ -50,6 +51,18 @@ php artisan migrate --seed
 php artisan serve
 ```
 
+Docker workflow used during validation:
+
+```bash
+docker pull composer:2
+docker run --rm --user "$(id -u):$(id -g)" \
+  -v "$(pwd)/apps/backend-laravel:/app" \
+  -w /app composer:2 composer install
+docker run --rm --user "$(id -u):$(id -g)" -p 8000:8000 \
+  -v "$(pwd)/apps/backend-laravel:/app" \
+  -w /app composer:2 php artisan serve --host=0.0.0.0 --port=8000
+```
+
 Open:
 
 - Web panel: `http://127.0.0.1:8000/vehicles`
@@ -60,6 +73,14 @@ Open:
 ```bash
 cd apps/backend-laravel
 php artisan test
+```
+
+Validated container test command:
+
+```bash
+docker run --rm --user "$(id -u):$(id -g)" \
+  -v "$(pwd)/apps/backend-laravel:/app" \
+  -w /app composer:2 php artisan test
 ```
 
 ## Main Endpoints
@@ -75,6 +96,6 @@ php artisan test
 
 ## Status
 
-This phase delivers a clean Laravel foundation with simulated integration behavior. The next phase is to implement `apps/integration-hub-go` and replace the simulated client with real HTTP calls to that service.
+The Laravel foundation has been validated with Composer dependencies, SQLite migrations, seeders, automated tests, and manual web/API checks. The next development phase should harden the Laravel integration flow before moving the simulation into `apps/integration-hub-go`.
 
-See `docs/` for architecture, API contracts, integration flow, presentation guidance, and the living project memory.
+See `docs/` for architecture, API contracts, Laravel-Go integration contract, integration flow, presentation guidance, and the living project memory.

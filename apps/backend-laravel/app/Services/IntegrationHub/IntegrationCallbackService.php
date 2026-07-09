@@ -26,9 +26,14 @@ class IntegrationCallbackService
             ],
             [
                 'status' => $payload['status'],
+                'request_payload' => $payload,
                 'response_payload' => $payload['response_payload'] ?? $payload,
                 'error_message' => $payload['error_message'] ?? null,
-                'attempts' => 1,
+                'attempts' => IntegrationLog::query()
+                    ->where('vehicle_id', $vehicle->id)
+                    ->where('provider', $payload['provider'])
+                    ->where('operation', $payload['operation'])
+                    ->count() + 1,
                 'last_attempt_at' => Carbon::now(),
             ],
         );

@@ -7,8 +7,10 @@ use App\Http\Requests\StoreVehicleRequest;
 use App\Http\Requests\SyncVehicleRequest;
 use App\Http\Requests\UpdateVehicleRequest;
 use App\Http\Resources\IntegrationLogResource;
+use App\Http\Resources\IntegrationSummaryResource;
 use App\Http\Resources\VehicleResource;
 use App\Models\Vehicle;
+use App\Services\IntegrationHub\VehicleIntegrationSummaryService;
 use App\Services\IntegrationHub\VehicleSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -71,5 +73,10 @@ class VehicleController extends Controller
                 ->latest()
                 ->paginate(20)
         );
+    }
+
+    public function integrationSummary(Vehicle $vehicle, VehicleIntegrationSummaryService $summaryService): AnonymousResourceCollection
+    {
+        return IntegrationSummaryResource::collection($summaryService->summarize($vehicle));
     }
 }
