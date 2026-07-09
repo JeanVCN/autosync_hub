@@ -67,22 +67,25 @@ AutoSync Hub demonstrates a professional backend and integration architecture fo
 - Completed Phase 4 Laravel-Go contract design on 2026-07-09: added `docs/LARAVEL_GO_CONTRACT.md`, integration config for timeout/token/callback/contract version, and simulated contract metadata in `IntegrationHubClient`.
 - Completed Phase 5 Go Integration Hub foundation on 2026-07-09: added a Go HTTP service with `/healthz`, `/sync-requests`, simulated providers, callback dispatcher, validation, tests, Docker Compose integration, and manual HTTP validation on `PORT=18080`.
 - Completed Phase 6 Laravel-Go HTTP integration on 2026-07-09: `IntegrationHubClient` now calls `POST /sync-requests`, persists provider results returned by Go, records failed logs on hub rejection/unavailability, and was manually validated end-to-end with Laravel on `PORT=18000` and Go on `PORT=18080`.
+- Switched the development database target from SQLite to PostgreSQL on 2026-07-09. SQLite remains configured for PHPUnit in-memory tests only.
+- The Compose PostgreSQL service is exposed on host port `5433` and keeps port `5432` only inside the Docker network to avoid conflicts with local PostgreSQL installations.
 
 ## Pending Tasks
 
 - Decide the next phase from `docs/DEVELOPMENT_ROADMAP.md`.
 - Replace Go provider simulations with real adapter boundaries when ready.
+- Keep PostgreSQL as the default development database and use SQLite only for isolated automated tests.
 - Add authentication and webhook security before any production use.
 - Improve Docker setup with a Composer-capable PHP image or custom Dockerfile.
 
 ## Important Commands
 
 ```bash
+docker compose up -d postgres
 cd apps/backend-laravel
 composer install
 cp .env.example .env
 php artisan key:generate
-touch database/database.sqlite
 php artisan migrate --seed
 php artisan serve
 php artisan test

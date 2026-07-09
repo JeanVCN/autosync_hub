@@ -7,6 +7,7 @@ use App\Enums\IntegrationStatus;
 use App\Models\IntegrationLog;
 use App\Models\Vehicle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -46,6 +47,8 @@ class VehicleApiTest extends TestCase
 
     public function test_it_syncs_a_vehicle_and_registers_logs(): void
     {
+        $this->configureIntegrationHubForTests();
+
         $vehicle = Vehicle::factory()->create(['external_code' => 'CAR-901']);
 
         Http::fake([
@@ -95,6 +98,8 @@ class VehicleApiTest extends TestCase
 
     public function test_it_records_failed_logs_when_the_integration_hub_rejects_the_request(): void
     {
+        $this->configureIntegrationHubForTests();
+
         $vehicle = Vehicle::factory()->create(['external_code' => 'CAR-903']);
 
         Http::fake([
@@ -121,6 +126,12 @@ class VehicleApiTest extends TestCase
             'status' => IntegrationStatus::Failed->value,
             'error_message' => 'Request contains invalid fields',
         ]);
+    }
+
+    private function configureIntegrationHubForTests(): void
+    {
+        Config::set('services.integration_hub.url', 'http://localhost:8080');
+        Config::set('services.integration_hub.callback_url', 'http://localhost:8000/api/integration-callbacks');
     }
 
     public function test_it_rejects_invalid_sync_providers(): void

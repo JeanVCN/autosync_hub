@@ -46,6 +46,14 @@ Provider-specific requirements, such as mandatory fields or transformed descript
 
 This makes the demo easy to inspect and creates an audit trail that would matter in a real dealership integration product.
 
+## Database Choice
+
+The development environment now uses PostgreSQL because it is closer to a production-grade relational setup and matches the expected future use of JSON payload columns for integration audit data.
+
+Docker exposes PostgreSQL on host port `5433` while the internal Compose network still uses port `5432`. This avoids conflicts with a developer's local PostgreSQL installation.
+
+Automated tests still use SQLite in memory through `phpunit.xml`. This keeps tests fast and isolated while the main local stack runs with PostgreSQL.
+
 ## Current Tradeoff
 
 Laravel now calls the Go Integration Hub over HTTP through `IntegrationHubClient`. The hub still simulates provider execution, which keeps the full product flow demonstrable without depending on external credentials or marketplace approval processes.

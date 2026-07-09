@@ -39,31 +39,31 @@ autosync_hub/
 
 - PHP 8.2 ou superior.
 - Composer.
-- SQLite, MySQL ou PostgreSQL. SQLite é suficiente para a demo.
+- PostgreSQL para o ambiente de desenvolvimento principal.
+- O PostgreSQL do Docker fica disponível no host em `127.0.0.1:5433` para não brigar com um PostgreSQL local em `5432`.
+- SQLite ainda é usado nos testes automatizados em memória, por ser rápido e isolado.
 - Docker, se preferir usar o fluxo validado em container.
 
 ## Como Rodar
 
 ```bash
+docker compose up -d postgres
 cd apps/backend-laravel
 composer install
 cp .env.example .env
 php artisan key:generate
-touch database/database.sqlite
 php artisan migrate --seed
 php artisan serve
 ```
 
-Fluxo Docker usado na validação:
+Fluxo Docker recomendado:
 
 ```bash
-docker pull composer:2
-docker run --rm --user "$(id -u):$(id -g)" \
-  -v "$(pwd)/apps/backend-laravel:/app" \
-  -w /app composer:2 composer install
-docker run --rm --user "$(id -u):$(id -g)" -p 8000:8000 \
-  -v "$(pwd)/apps/backend-laravel:/app" \
-  -w /app composer:2 php artisan serve --host=0.0.0.0 --port=8000
+docker compose build backend-laravel
+docker compose run --rm --no-deps backend-laravel composer install
+docker compose run --rm --no-deps backend-laravel php artisan key:generate
+docker compose run --rm backend-laravel php artisan migrate --seed
+docker compose up backend-laravel integration-hub-go postgres
 ```
 
 Abra:
@@ -107,7 +107,7 @@ Go Integration Hub:
 
 ## Status
 
-A base Laravel foi validada com dependências Composer, migrations SQLite, seeders, testes automatizados e checagens manuais web/API. O fluxo de integração Laravel foi endurecido com resumo por provider e validações negativas, e o contrato Laravel-Go já está documentado.
+A base Laravel foi migrada para PostgreSQL no ambiente de desenvolvimento, mantendo SQLite apenas para testes automatizados em memória. O fluxo de integração Laravel foi endurecido com resumo por provider e validações negativas, e o contrato Laravel-Go já está documentado.
 
 A fundação do hub Go já foi implementada em `apps/integration-hub-go`, e o Laravel já chama esse hub por HTTP no fluxo de sincronização. Os providers ainda são simulados dentro do Go, o que preserva a demo sem depender de APIs reais.
 

@@ -1,6 +1,9 @@
 services:
   backend-laravel:
-    image: composer:2
+    build:
+      context: ./apps/backend-laravel
+      dockerfile: Dockerfile
+    image: autosync-hub/backend-laravel:dev
     user: "${UID:-1000}:${GID:-1000}"
     working_dir: /app/apps/backend-laravel
     volumes:
@@ -11,13 +14,36 @@ services:
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
-      DB_CONNECTION: sqlite
-      DB_DATABASE: database/database.sqlite
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_DATABASE: autosync_hub
+      DB_USERNAME: autosync_hub
+      DB_PASSWORD: secret
       INTEGRATION_HUB_URL: http://integration-hub-go:8080
       INTEGRATION_CALLBACK_URL: http://backend-laravel:8000/api/integration-callbacks
       INTEGRATION_CONTRACT_VERSION: "2026-07-09"
     depends_on:
-      - integration-hub-go
+      postgres:
+        condition: service_healthy
+      integration-hub-go:
+        condition: service_started
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: autosync_hub
+      POSTGRES_USER: autosync_hub
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autosync_hub -d autosync_hub"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   integration-hub-go:
     image: golang:1.24-alpine
@@ -33,3 +59,6 @@ services:
       GOCACHE: /tmp/autosync-go-cache
       INTEGRATION_CONTRACT_VERSION: "2026-07-09"
       CALLBACK_TIMEOUT_SECONDS: "5"
+
+volumes:
+  postgres-data:
