@@ -14,6 +14,8 @@ services:
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
+      APP_TIMEZONE: UTC
+      APP_DISPLAY_TIMEZONE: America/Sao_Paulo
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: "5432"

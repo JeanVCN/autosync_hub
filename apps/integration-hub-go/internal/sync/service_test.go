@@ -3,7 +3,9 @@ package sync
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 type fakeProvider struct{}
@@ -28,19 +30,23 @@ func (fakeProvider) Process(ctx context.Context, request SyncRequest) (ProviderR
 }
 
 type recordingDispatcher struct {
-	calls int
+	calls atomic.Int32
+	done  chan struct{}
 }
 
 func (d *recordingDispatcher) Dispatch(ctx context.Context, request SyncRequest, result ProviderResult) error {
 	_ = ctx
 	_ = request
 	_ = result
-	d.calls++
+	d.calls.Add(1)
+	if d.done != nil {
+		d.done <- struct{}{}
+	}
 	return nil
 }
 
 func TestServiceAcceptsValidSyncRequest(t *testing.T) {
-	dispatcher := &recordingDispatcher{}
+	dispatcher := &recordingDispatcher{done: make(chan struct{}, 2)}
 	service := NewService([]ProviderAdapter{
 		fakeProvider{},
 		fakeMercadoLivreProvider{},
@@ -59,8 +65,16 @@ func TestServiceAcceptsValidSyncRequest(t *testing.T) {
 		t.Fatalf("expected 2 results, got %d", len(response.Results))
 	}
 
-	if dispatcher.calls != 2 {
-		t.Fatalf("expected 2 callback dispatches, got %d", dispatcher.calls)
+	for range 2 {
+		select {
+		case <-dispatcher.done:
+		case <-time.After(time.Second):
+			t.Fatal("timed out waiting for callback dispatch")
+		}
+	}
+
+	if calls := dispatcher.calls.Load(); calls != 2 {
+		t.Fatalf("expected 2 callback dispatches, got %d", calls)
 	}
 }
 

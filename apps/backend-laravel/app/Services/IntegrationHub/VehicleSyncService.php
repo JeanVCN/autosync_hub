@@ -20,15 +20,21 @@ class VehicleSyncService
     {
         $providers = $this->normalizeProviders($providers);
         $requestedAt = Carbon::now();
-
-        foreach ($providers as $provider) {
-            $this->createPendingLog($vehicle, $provider, $requestedAt);
-        }
+        $pendingLogs = collect($providers)
+            ->mapWithKeys(fn (string $provider): array => [
+                $provider => $this->createPendingLog($vehicle, $provider, $requestedAt),
+            ]);
 
         $hubResponse = $this->client->syncVehicle($vehicle, $providers);
 
         foreach ($hubResponse['results'] as $result) {
-            $this->persistProviderResult($vehicle, $result, $hubResponse, $requestedAt);
+            $this->persistProviderResult(
+                $vehicle,
+                $result,
+                $hubResponse,
+                $requestedAt,
+                $pendingLogs->get($result['provider']),
+            );
         }
 
         return $hubResponse;
@@ -44,9 +50,9 @@ class VehicleSyncService
             ->all();
     }
 
-    private function createPendingLog(Vehicle $vehicle, string $provider, Carbon $requestedAt): void
+    private function createPendingLog(Vehicle $vehicle, string $provider, Carbon $requestedAt): IntegrationLog
     {
-        IntegrationLog::create([
+        return IntegrationLog::create([
             'vehicle_id' => $vehicle->id,
             'provider' => $provider,
             'operation' => IntegrationOperation::Publish->value,
@@ -60,12 +66,16 @@ class VehicleSyncService
         ]);
     }
 
-    private function persistProviderResult(Vehicle $vehicle, array $result, array $hubResponse, Carbon $requestedAt): void
-    {
-        IntegrationLog::create([
-            'vehicle_id' => $vehicle->id,
-            'provider' => $result['provider'],
-            'operation' => IntegrationOperation::Publish->value,
+    private function persistProviderResult(
+        Vehicle $vehicle,
+        array $result,
+        array $hubResponse,
+        Carbon $requestedAt,
+        ?IntegrationLog $pendingLog,
+    ): void {
+        $log = $this->resolveResultLog($vehicle, $result, $pendingLog);
+
+        $log->update([
             'status' => $result['status'],
             'external_reference' => $result['external_reference'] ?? null,
             'request_payload' => [
@@ -74,8 +84,37 @@ class VehicleSyncService
             ],
             'response_payload' => $hubResponse,
             'error_message' => $result['error_message'] ?? null,
-            'attempts' => 1,
+            'attempts' => max((int) $log->attempts, 1),
             'last_attempt_at' => $requestedAt,
+        ]);
+    }
+
+    private function resolveResultLog(Vehicle $vehicle, array $result, ?IntegrationLog $pendingLog): IntegrationLog
+    {
+        if ($pendingLog) {
+            return $pendingLog;
+        }
+
+        if (! empty($result['external_reference'])) {
+            $existingResult = IntegrationLog::query()
+                ->where('vehicle_id', $vehicle->id)
+                ->where('provider', $result['provider'])
+                ->where('operation', IntegrationOperation::Publish->value)
+                ->where('external_reference', $result['external_reference'])
+                ->latest('last_attempt_at')
+                ->latest()
+                ->first();
+
+            if ($existingResult) {
+                return $existingResult;
+            }
+        }
+
+        return IntegrationLog::create([
+            'vehicle_id' => $vehicle->id,
+            'provider' => $result['provider'],
+            'operation' => IntegrationOperation::Publish->value,
+            'status' => IntegrationStatus::Pending->value,
         ]);
     }
 }

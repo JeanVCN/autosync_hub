@@ -66,6 +66,10 @@
             <div class="alert">{{ session('status') }}</div>
         @endif
 
+        @if (session('error'))
+            <div class="errors"><strong>{{ session('error') }}</strong></div>
+        @endif
+
         @if ($errors->any())
             <div class="errors">
                 <strong>Review the highlighted fields.</strong>

@@ -6,7 +6,9 @@ use App\Enums\IntegrationProvider;
 use App\Enums\IntegrationStatus;
 use App\Models\IntegrationLog;
 use App\Models\Vehicle;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -84,7 +86,11 @@ class VehicleApiTest extends TestCase
             ->assertJsonPath('data.callback_url', 'http://localhost:8000/api/integration-callbacks')
             ->assertJsonCount(2, 'data.results');
 
-        $this->assertDatabaseCount('integration_logs', 4);
+        $this->assertDatabaseCount('integration_logs', 2);
+        $this->assertDatabaseMissing('integration_logs', [
+            'vehicle_id' => $vehicle->id,
+            'status' => IntegrationStatus::Pending->value,
+        ]);
 
         Http::assertSent(function ($request): bool {
             return $request->url() === 'http://localhost:8080/sync-requests'
@@ -126,6 +132,41 @@ class VehicleApiTest extends TestCase
             'status' => IntegrationStatus::Failed->value,
             'error_message' => 'Request contains invalid fields',
         ]);
+        $this->assertDatabaseMissing('integration_logs', [
+            'vehicle_id' => $vehicle->id,
+            'provider' => IntegrationProvider::Olx->value,
+            'status' => IntegrationStatus::Pending->value,
+        ]);
+    }
+
+    public function test_it_does_not_leave_pending_logs_when_the_integration_hub_is_unavailable(): void
+    {
+        $this->configureIntegrationHubForTests();
+
+        $vehicle = Vehicle::factory()->create(['external_code' => 'CAR-905']);
+
+        Http::fake(function (): never {
+            throw new ConnectionException('Connection refused');
+        });
+
+        $this->postJson("/api/vehicles/{$vehicle->id}/sync", [
+            'providers' => [IntegrationProvider::Olx->value],
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'failed')
+            ->assertJsonPath('data.results.0.status', IntegrationStatus::Failed->value)
+            ->assertJsonPath('data.results.0.error_message', 'Integration Hub is unavailable.');
+
+        $this->assertDatabaseCount('integration_logs', 1);
+        $this->assertDatabaseHas('integration_logs', [
+            'vehicle_id' => $vehicle->id,
+            'provider' => IntegrationProvider::Olx->value,
+            'status' => IntegrationStatus::Failed->value,
+            'error_message' => 'Integration Hub is unavailable.',
+        ]);
+        $this->assertDatabaseMissing('integration_logs', [
+            'vehicle_id' => $vehicle->id,
+            'status' => IntegrationStatus::Pending->value,
+        ]);
     }
 
     private function configureIntegrationHubForTests(): void
@@ -165,6 +206,71 @@ class VehicleApiTest extends TestCase
             'provider' => 'olx',
             'status' => IntegrationStatus::Published->value,
             'external_reference' => 'OLX-123456',
+        ]);
+    }
+
+    public function test_integration_callback_updates_existing_pending_log(): void
+    {
+        $vehicle = Vehicle::factory()->create(['external_code' => 'CAR-904']);
+
+        IntegrationLog::factory()->create([
+            'vehicle_id' => $vehicle->id,
+            'provider' => IntegrationProvider::Olx->value,
+            'status' => IntegrationStatus::Pending->value,
+            'external_reference' => null,
+        ]);
+
+        $this->postJson('/api/integration-callbacks', [
+            'vehicle_external_code' => 'CAR-904',
+            'provider' => 'olx',
+            'operation' => 'publish',
+            'status' => 'published',
+            'external_reference' => 'OLX-904',
+            'response_payload' => [
+                'message' => 'Vehicle published successfully',
+            ],
+        ])->assertOk();
+
+        $this->assertDatabaseCount('integration_logs', 1);
+        $this->assertDatabaseHas('integration_logs', [
+            'vehicle_id' => $vehicle->id,
+            'provider' => 'olx',
+            'status' => IntegrationStatus::Published->value,
+            'external_reference' => 'OLX-904',
+        ]);
+    }
+
+    public function test_integration_callback_preserves_attempts_for_existing_result_log(): void
+    {
+        $vehicle = Vehicle::factory()->create(['external_code' => 'CAR-906']);
+
+        IntegrationLog::factory()->create([
+            'vehicle_id' => $vehicle->id,
+            'provider' => IntegrationProvider::MercadoLivre->value,
+            'status' => IntegrationStatus::Processing->value,
+            'external_reference' => 'MERCADOLIVRE-CAR-906',
+            'attempts' => 1,
+        ]);
+
+        $this->postJson('/api/integration-callbacks', [
+            'vehicle_external_code' => 'CAR-906',
+            'provider' => 'mercado_livre',
+            'operation' => 'publish',
+            'status' => 'processing',
+            'external_reference' => 'MERCADOLIVRE-CAR-906',
+            'response_payload' => [
+                'attempts' => 1,
+                'message' => 'Provider accepted the vehicle for processing',
+            ],
+        ])->assertOk();
+
+        $this->assertDatabaseCount('integration_logs', 1);
+        $this->assertDatabaseHas('integration_logs', [
+            'vehicle_id' => $vehicle->id,
+            'provider' => 'mercado_livre',
+            'status' => IntegrationStatus::Processing->value,
+            'external_reference' => 'MERCADOLIVRE-CAR-906',
+            'attempts' => 1,
         ]);
     }
 
@@ -284,6 +390,26 @@ class VehicleApiTest extends TestCase
             ->assertSee('OLX-WEB');
     }
 
+    public function test_vehicle_detail_page_displays_sync_times_in_configured_display_timezone(): void
+    {
+        Config::set('app.display_timezone', 'America/Sao_Paulo');
+
+        $vehicle = Vehicle::factory()->create(['external_code' => 'CAR-TZ']);
+
+        IntegrationLog::factory()->create([
+            'vehicle_id' => $vehicle->id,
+            'provider' => IntegrationProvider::Olx->value,
+            'status' => IntegrationStatus::Published->value,
+            'external_reference' => 'OLX-TZ',
+            'last_attempt_at' => Carbon::parse('2026-07-10 12:00:00', 'UTC'),
+        ]);
+
+        $this->get("/vehicles/{$vehicle->id}")
+            ->assertOk()
+            ->assertSee('Last attempt (America/Sao_Paulo)')
+            ->assertSee('2026-07-10 09:00');
+    }
+
     public function test_vehicle_create_page_displays_form(): void
     {
         $this->get('/vehicles/create')
@@ -352,7 +478,31 @@ class VehicleApiTest extends TestCase
         $this->post("/vehicles/{$vehicle->id}/sync")
             ->assertRedirect("/vehicles/{$vehicle->id}");
 
-        $this->assertDatabaseCount('integration_logs', 6);
+        $this->assertDatabaseCount('integration_logs', 3);
+        $this->assertDatabaseMissing('integration_logs', [
+            'vehicle_id' => $vehicle->id,
+            'status' => IntegrationStatus::Pending->value,
+        ]);
+    }
+
+    public function test_web_sync_shows_error_when_the_integration_hub_is_unavailable(): void
+    {
+        $this->configureIntegrationHubForTests();
+        $vehicle = Vehicle::factory()->create(['external_code' => 'WEB-004']);
+
+        Http::fake(function (): never {
+            throw new ConnectionException('Connection refused');
+        });
+
+        $this->post("/vehicles/{$vehicle->id}/sync")
+            ->assertRedirect("/vehicles/{$vehicle->id}")
+            ->assertSessionHas('error', 'Vehicle synchronization failed: Integration Hub is unavailable.');
+
+        $this->assertDatabaseCount('integration_logs', 3);
+        $this->assertDatabaseMissing('integration_logs', [
+            'vehicle_id' => $vehicle->id,
+            'status' => IntegrationStatus::Pending->value,
+        ]);
     }
 
     public function test_it_deletes_a_vehicle_from_web_detail_page(): void

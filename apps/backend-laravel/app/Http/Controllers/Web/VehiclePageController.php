@@ -80,10 +80,14 @@ class VehiclePageController extends Controller
 
     public function sync(Vehicle $vehicle, VehicleSyncService $syncService): RedirectResponse
     {
-        $syncService->sync($vehicle, IntegrationProvider::values());
+        $hubResponse = $syncService->sync($vehicle, IntegrationProvider::values());
+        $flashKey = in_array($hubResponse['status'] ?? null, ['failed', 'rejected'], true) ? 'error' : 'status';
+        $message = $flashKey === 'error'
+            ? 'Vehicle synchronization failed: '.($hubResponse['message'] ?? 'Integration Hub rejected the request.')
+            : 'Vehicle synchronization requested.';
 
         return redirect()
             ->route('web.vehicles.show', $vehicle)
-            ->with('status', 'Vehicle synchronization requested.');
+            ->with($flashKey, $message);
     }
 }

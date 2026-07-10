@@ -16,6 +16,7 @@ O projeto ainda usa providers simulados para OLX, Mercado Livre e iCarros, porqu
 - Resumo atual de integração por provider.
 - PostgreSQL no ambiente de desenvolvimento.
 - SQLite em memória nos testes automatizados do Laravel.
+- Datas técnicas mantidas em UTC e exibidas na interface em `America/Sao_Paulo`.
 - Testes de feature no Laravel e testes unitários/HTTP no Go.
 - Documentação de arquitetura, contratos e evolução em `docs/`.
 
@@ -65,6 +66,8 @@ Depois abra:
 
 O PostgreSQL do Docker fica exposto no host em `127.0.0.1:5433`, evitando conflito com instalações locais que usam `5432`.
 
+Por padrão, o Laravel mantém timestamps técnicos em UTC (`APP_TIMEZONE=UTC`) e exibe horários de sincronização no fuso local configurado em `APP_DISPLAY_TIMEZONE=America/Sao_Paulo`.
+
 ## Fluxo Para Testar
 
 1. Abra `http://127.0.0.1:8000/vehicles`.
@@ -75,6 +78,12 @@ O PostgreSQL do Docker fica exposto no host em `127.0.0.1:5433`, evitando confli
 6. Use `Request Sync` para enviar o veículo ao hub Go.
 7. Confira os logs e o resumo de integração no detalhe.
 8. Compare com os endpoints JSON da API, se quiser inspecionar o contrato.
+
+Se o resultado ficar `failed` com a mensagem `Integration Hub is unavailable.`, o Laravel não conseguiu alcançar o serviço Go. Nesse caso, confirme que o Compose foi iniciado com `integration-hub-go` junto do backend:
+
+```bash
+docker compose up backend-laravel integration-hub-go postgres
+```
 
 ## Rodando Localmente Sem Docker
 

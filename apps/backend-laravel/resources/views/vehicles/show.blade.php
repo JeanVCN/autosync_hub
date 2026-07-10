@@ -1,6 +1,10 @@
 @extends('layout', ['title' => $vehicle->external_code.' - AutoSync Hub'])
 
 @section('content')
+    @php
+        $displayTimezone = config('app.display_timezone', config('app.timezone'));
+    @endphp
+
     <h1>{{ $vehicle->brand }} {{ $vehicle->model }}</h1>
     <p>{{ $vehicle->external_code }} · {{ $vehicle->version }} · {{ $vehicle->year }}/{{ $vehicle->model_year }}</p>
 
@@ -34,7 +38,7 @@
                 <th>Operation</th>
                 <th>External ref</th>
                 <th>Attempts</th>
-                <th>Last attempt</th>
+                <th>Last attempt ({{ $displayTimezone }})</th>
             </tr>
         </thead>
         <tbody>
@@ -45,7 +49,7 @@
                     <td>{{ $summary['operation'] ?? '-' }}</td>
                     <td>{{ $summary['external_reference'] ?? '-' }}</td>
                     <td>{{ $summary['attempts'] }}</td>
-                    <td>{{ $summary['last_attempt_at'] ? \Illuminate\Support\Carbon::parse($summary['last_attempt_at'])->format('Y-m-d H:i') : '-' }}</td>
+                    <td>{{ $summary['last_attempt_at'] ? \Illuminate\Support\Carbon::parse($summary['last_attempt_at'])->timezone($displayTimezone)->format('Y-m-d H:i') : '-' }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -60,7 +64,7 @@
                 <th>Status</th>
                 <th>External ref</th>
                 <th>Error</th>
-                <th>Last attempt</th>
+                <th>Last attempt ({{ $displayTimezone }})</th>
             </tr>
         </thead>
         <tbody>
@@ -71,7 +75,7 @@
                     <td><span class="badge {{ $log->status->value }}">{{ $log->status->value }}</span></td>
                     <td>{{ $log->external_reference ?? '-' }}</td>
                     <td>{{ $log->error_message ?? '-' }}</td>
-                    <td>{{ $log->last_attempt_at?->format('Y-m-d H:i') ?? '-' }}</td>
+                    <td>{{ $log->last_attempt_at?->timezone($displayTimezone)->format('Y-m-d H:i') ?? '-' }}</td>
                 </tr>
             @empty
                 <tr>

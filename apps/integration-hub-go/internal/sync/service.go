@@ -61,7 +61,9 @@ func (s *Service) Handle(ctx context.Context, request SyncRequest) (SyncResponse
 		results = append(results, result)
 
 		if request.CallbackURL != "" && s.dispatcher != nil {
-			_ = s.dispatcher.Dispatch(ctx, request, result)
+			go func(result ProviderResult) {
+				_ = s.dispatcher.Dispatch(context.Background(), request, result)
+			}(result)
 		}
 	}
 
