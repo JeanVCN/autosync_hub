@@ -14,7 +14,6 @@ services:
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
-      DB_URL: pgsql://autosync_hub:secret@postgres:5432/autosync_hub
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: "5432"

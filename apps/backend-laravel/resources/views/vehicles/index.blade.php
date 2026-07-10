@@ -4,6 +4,10 @@
     <h1>Vehicles</h1>
     <p>Canonical inventory records ready to be synchronized with automotive marketplaces.</p>
 
+    <div class="actions">
+        <a class="button-link" href="{{ route('web.vehicles.create') }}">New Vehicle</a>
+    </div>
+
     <table>
         <thead>
             <tr>
@@ -18,7 +22,7 @@
         <tbody>
             @foreach ($vehicles as $vehicle)
                 <tr>
-                    <td><a href="{{ route('vehicles.show', $vehicle) }}">{{ $vehicle->external_code }}</a></td>
+                    <td><a href="{{ route('web.vehicles.show', $vehicle) }}">{{ $vehicle->external_code }}</a></td>
                     <td>{{ $vehicle->brand }} {{ $vehicle->model }}<br><span class="muted">{{ $vehicle->version }}</span></td>
                     <td>{{ $vehicle->year }}/{{ $vehicle->model_year }}</td>
                     <td>R$ {{ number_format((float) $vehicle->price, 2, ',', '.') }}</td>

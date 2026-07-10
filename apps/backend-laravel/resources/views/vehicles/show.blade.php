@@ -5,10 +5,17 @@
     <p>{{ $vehicle->external_code }} · {{ $vehicle->version }} · {{ $vehicle->year }}/{{ $vehicle->model_year }}</p>
 
     <div class="actions">
-        <form method="post" action="/api/vehicles/{{ $vehicle->id }}/sync">
+        <form method="post" action="{{ route('web.vehicles.sync', $vehicle) }}">
+            @csrf
             <button type="submit">Request Sync</button>
         </form>
-        <a href="{{ route('vehicles.index') }}">Back to vehicles</a>
+        <a class="button-link" href="{{ route('web.vehicles.edit', $vehicle) }}">Edit Vehicle</a>
+        <form method="post" action="{{ route('web.vehicles.destroy', $vehicle) }}" onsubmit="return confirm('Delete this vehicle?');">
+            @csrf
+            @method('delete')
+            <button class="button-danger" type="submit">Delete Vehicle</button>
+        </form>
+        <a href="{{ route('web.vehicles.index') }}">Back to vehicles</a>
     </div>
 
     <section class="grid">

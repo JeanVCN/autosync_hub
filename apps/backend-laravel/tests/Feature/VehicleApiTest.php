@@ -283,4 +283,104 @@ class VehicleApiTest extends TestCase
             ->assertSee('published')
             ->assertSee('OLX-WEB');
     }
+
+    public function test_vehicle_create_page_displays_form(): void
+    {
+        $this->get('/vehicles/create')
+            ->assertOk()
+            ->assertSee('New Vehicle')
+            ->assertSee('External code');
+    }
+
+    public function test_it_creates_a_vehicle_from_web_form(): void
+    {
+        $this->post('/vehicles', $this->vehicleFormPayload([
+            'external_code' => 'WEB-001',
+            'brand' => 'Jeep',
+            'model' => 'Compass',
+        ]))->assertRedirect();
+
+        $this->assertDatabaseHas('vehicles', [
+            'external_code' => 'WEB-001',
+            'brand' => 'Jeep',
+            'model' => 'Compass',
+        ]);
+    }
+
+    public function test_it_updates_a_vehicle_from_web_form(): void
+    {
+        $vehicle = Vehicle::factory()->create(['external_code' => 'WEB-002']);
+
+        $this->put("/vehicles/{$vehicle->id}", $this->vehicleFormPayload([
+            'external_code' => 'WEB-002',
+            'brand' => 'Chevrolet',
+            'model' => 'Tracker',
+            'status' => 'inactive',
+        ]))->assertRedirect("/vehicles/{$vehicle->id}");
+
+        $this->assertDatabaseHas('vehicles', [
+            'id' => $vehicle->id,
+            'brand' => 'Chevrolet',
+            'model' => 'Tracker',
+            'status' => 'inactive',
+        ]);
+    }
+
+    public function test_it_requests_sync_from_web_detail_page(): void
+    {
+        $this->configureIntegrationHubForTests();
+        $vehicle = Vehicle::factory()->create(['external_code' => 'WEB-003']);
+
+        Http::fake([
+            'http://localhost:8080/sync-requests' => Http::response([
+                'request_id' => 'web-hub-request',
+                'status' => 'accepted',
+                'message' => 'Sync request accepted for processing',
+                'accepted_providers' => IntegrationProvider::values(),
+                'results' => collect(IntegrationProvider::values())
+                    ->map(fn (string $provider): array => [
+                        'provider' => $provider,
+                        'operation' => 'publish',
+                        'status' => IntegrationStatus::Processing->value,
+                        'external_reference' => strtoupper($provider).'-WEB-003',
+                        'response_payload' => ['message' => 'queued'],
+                    ])
+                    ->all(),
+            ], 202),
+        ]);
+
+        $this->post("/vehicles/{$vehicle->id}/sync")
+            ->assertRedirect("/vehicles/{$vehicle->id}");
+
+        $this->assertDatabaseCount('integration_logs', 6);
+    }
+
+    public function test_it_deletes_a_vehicle_from_web_detail_page(): void
+    {
+        $vehicle = Vehicle::factory()->create();
+
+        $this->delete("/vehicles/{$vehicle->id}")
+            ->assertRedirect('/vehicles');
+
+        $this->assertDatabaseMissing('vehicles', ['id' => $vehicle->id]);
+    }
+
+    private function vehicleFormPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'external_code' => 'WEB-CAR',
+            'brand' => 'Honda',
+            'model' => 'Civic',
+            'version' => 'EXL 2.0',
+            'year' => 2020,
+            'model_year' => 2021,
+            'price' => 118900,
+            'mileage' => 42000,
+            'fuel_type' => 'flex',
+            'transmission' => 'automatic',
+            'color' => 'gray',
+            'description' => 'Demo vehicle',
+            'status' => 'active',
+        ], $overrides);
+    }
 }

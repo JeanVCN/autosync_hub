@@ -29,17 +29,27 @@
         th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
         th { font-size: 12px; text-transform: uppercase; color: var(--muted); background: #eef2f6; }
         tr:last-child td { border-bottom: 0; }
+        form { margin: 0; }
+        label { display: grid; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 700; }
+        input, select, textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; color: var(--text); background: #fff; font: inherit; }
+        textarea { min-height: 110px; resize: vertical; }
         .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+        .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
         .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px; }
         .label { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; margin-bottom: 4px; }
         .badge { display: inline-flex; align-items: center; min-height: 24px; padding: 3px 8px; border-radius: 999px; background: #e9f5ef; color: var(--accent); font-size: 12px; font-weight: 700; }
         .badge.failed, .badge.rejected { background: #fff0ee; color: var(--danger); }
         .badge.processing, .badge.pending, .badge.requires_action { background: #fff8e5; color: var(--warning); }
-        .actions { display: flex; align-items: center; gap: 10px; margin: 16px 0 22px; }
+        .actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 16px 0 22px; }
         button { border: 0; border-radius: 6px; background: var(--accent); color: #fff; padding: 10px 14px; font-weight: 700; cursor: pointer; }
+        .button-link { display: inline-flex; align-items: center; border-radius: 6px; background: var(--accent); color: #fff; padding: 10px 14px; font-weight: 700; }
+        .button-danger { background: var(--danger); }
+        .full-span { grid-column: 1 / -1; }
+        .alert { margin: 18px 0; border: 1px solid #b7e2c8; border-radius: 8px; padding: 12px 14px; background: #eefaf3; color: var(--accent); font-weight: 700; }
+        .errors { margin: 18px 0; border: 1px solid #f0b8b1; border-radius: 8px; padding: 12px 14px; background: #fff0ee; color: var(--danger); }
         .muted { color: var(--muted); }
         @media (max-width: 760px) {
-            .grid { grid-template-columns: 1fr; }
+            .grid, .form-grid { grid-template-columns: 1fr; }
             table { display: block; overflow-x: auto; }
         }
     </style>
@@ -48,10 +58,25 @@
     <header>
         <nav>
             <strong>AutoSync Hub</strong>
-            <a href="{{ route('vehicles.index') }}">Vehicles</a>
+            <a href="{{ route('web.vehicles.index') }}">Vehicles</a>
         </nav>
     </header>
     <main>
+        @if (session('status'))
+            <div class="alert">{{ session('status') }}</div>
+        @endif
+
+        @if ($errors->any())
+            <div class="errors">
+                <strong>Review the highlighted fields.</strong>
+                <ul>
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         @yield('content')
     </main>
 </body>
